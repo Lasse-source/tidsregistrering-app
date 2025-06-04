@@ -8,13 +8,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
+    <!-- PWA Manifest Link -->
     <link rel="manifest" href="manifest.json">
 
+    <!-- iOS Meta Tags for "Add to Home Screen" -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tidsreg">
-    <link rel="apple-touch-icon" href="https://placehold.co/180x180/4f46e5/ffffff?text=TR">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"> 
+    <!-- Sørg for at have et ikon med navnet apple-touch-icon.png (f.eks. 180x180) i din 'icons' mappe -->
     
+    <!-- Theme Color for Android Chrome -->
     <meta name="theme-color" content="#4f46e5">
 
     <style>
@@ -1416,6 +1420,17 @@
             } else {
                 placeringSelect.value = ""; 
             }
+
+            // Service Worker Registration
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js')
+                .then(function(registration) {
+                    console.log('Service Worker registreret med scope:', registration.scope);
+                }).catch(function(error) {
+                    console.log('Service Worker registrering fejlede:', error);
+                });
+            }
+
         });
 
     </script>

@@ -2,7 +2,7 @@
 
 const CACHE_NAME = 'tidsregistrering-cache-v1';
 const urlsToCache = [
-  'tidsregistrering.html', // Din hoved HTML-fil
+  'index.html', // Din hoved HTML-fil
   // Tilføj andre vigtige filer her, hvis du har separate CSS- eller JS-filer,
   // som ikke loades via CDN.
   // F.eks.: 'styles/main.css', 'scripts/app.js'

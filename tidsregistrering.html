@@ -12,7 +12,8 @@
     <link rel="manifest" href="manifest.json">
 
     <!-- iOS Meta Tags for "Add to Home Screen" -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes"> <!-- Beholder for ældre iOS -->
+    <meta name="mobile-web-app-capable" content="yes"> <!-- Nyt anbefalet tag -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tidsreg">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"> 
@@ -22,6 +23,7 @@
     <meta name="theme-color" content="#4f46e5">
 
     <style>
+        /* ... resten af din CSS ... */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
@@ -124,6 +126,7 @@
     </style>
 </head>
 <body>
+    <!-- ... resten af din HTML body ... -->
     <div class="container">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-gray-700">Tidsregistrering</h1>
@@ -757,11 +760,10 @@
         // --- Kern Funktionalitet (Tilføj, Slet, Render, Rediger) ---
         function renderEntries() {
             entriesBody.innerHTML = ''; 
-            let overallTotalHours = 0;
+            // let overallTotalHours = 0; // Removed as the overall summary div is removed
             
             if (weeklyEntries.length === 0) {
                 toggleNoEntriesMessage();
-                // totalHoursSpan.textContent = "0.00"; // Removed
                 return;
             }
 
@@ -860,7 +862,7 @@
                         actionsCell.appendChild(deleteButton);
                     });
                 });
-                overallTotalHours += weeklyTotalHours;
+                // overallTotalHours += weeklyTotalHours; // Removed
             });
             
             // totalHoursSpan.textContent = overallTotalHours.toFixed(2); // Removed
@@ -1423,7 +1425,7 @@
 
             // Service Worker Registration
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js')
+                navigator.serviceWorker.register('sw.js') // Ensure sw.js is in the same directory
                 .then(function(registration) {
                     console.log('Service Worker registreret med scope:', registration.scope);
                 }).catch(function(error) {

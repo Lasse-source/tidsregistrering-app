@@ -2,7 +2,7 @@
   "name": "Tidsregistrering Snedkergården",
   "short_name": "Tidsreg",
   "description": "Enkel tidsregistrering for Snedkergården.",
-  "start_url": "tidsregistrering.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4f46e5",

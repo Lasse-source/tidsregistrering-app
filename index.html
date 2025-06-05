@@ -8,22 +8,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
-    <!-- PWA Manifest Link -->
     <link rel="manifest" href="manifest.json">
-
-    <!-- iOS Meta Tags for "Add to Home Screen" -->
-    <meta name="apple-mobile-web-app-capable" content="yes"> <!-- Beholder for ældre iOS -->
-    <meta name="mobile-web-app-capable" content="yes"> <!-- Nyt anbefalet tag -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Tidsreg">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"> 
-    <!-- Sørg for at have et ikon med navnet apple-touch-icon.png (f.eks. 180x180) i din 'icons' mappe -->
-    
-    <!-- Theme Color for Android Chrome -->
     <meta name="theme-color" content="#4f46e5">
 
     <style>
-        /* ... resten af din CSS ... */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
@@ -35,6 +28,14 @@
             background-color: white;
             border-radius: 0.5rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative; /* For version number positioning */
+        }
+        .version-number {
+            position: absolute;
+            bottom: 5px;
+            right: 10px;
+            font-size: 0.7rem;
+            color: #9ca3af; /* Gray-400 */
         }
         .form-input, .form-select, .form-textarea, .form-checkbox {
             border-radius: 0.375rem;
@@ -57,6 +58,19 @@
         .form-select:disabled, .form-input:disabled {
             background-color: #e5e7eb; cursor: not-allowed; opacity: 0.7;
         }
+        .form-select option.time-slot-booked {
+            color: red !important;
+            /* background-color: #fee2e2; */ /* Often overridden by browser default select styling */
+        }
+        .form-select option.time-slot-available {
+            color: green !important;
+        }
+         .form-select option.time-slot-blocked {
+            color: #b91c1c !important; /* Darker red for blocked */
+            /* text-decoration: line-through; */
+        }
+
+
         .btn {
             padding: 0.625rem 1.25rem; border-radius: 0.375rem; font-weight: 500;
             transition: background-color 0.15s ease-in-out; cursor: pointer; text-align: center;
@@ -117,16 +131,9 @@
         .modal-close-btn:hover, .modal-close-btn:focus {
             color: black; text-decoration: none; cursor: pointer;
         }
-        .time-slot-available {} 
-        .time-slot-booked {}
-        .time-slot-booked:disabled { 
-            background-color: #fee2e2; 
-            opacity: 0.8;
-        }
     </style>
 </head>
 <body>
-    <!-- ... resten af din HTML body ... -->
     <div class="container">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-gray-700">Tidsregistrering</h1>
@@ -161,7 +168,7 @@
                     </div>
                     <div class="mt-6">
                          <button type="button" id="exportCsvBtnModal" class="btn btn-info w-full mb-2">
-                            Eksporter Alle Data til CSV
+                            Eksporter til CSV
                         </button>
                     </div>
                      <button type="submit" class="btn btn-success w-full">Gem Indstillinger</button>
@@ -304,12 +311,14 @@
         <div class="mt-6 flex space-x-2">
             <button id="sendEmailBtn" class="btn btn-success w-full"> Send Ugeseddel
             </button>
-            </div>
+        </div>
         <p class="text-xs text-gray-500 mt-2 text-center">Sørg for at indstillinger er gemt før afsendelse.</p>
         <div id="emailStatus" class="mt-2"></div>
 
+        <div class="version-number">v1.1</div> <!-- Version Number Added -->
     </div>
 
+    <!-- Modals for week selection (email) & CSV export options -->
     <div id="weekSelectionModal" class="modal">
         <div class="modal-content">
             <span class="modal-close-btn" id="closeWeekSelectionModalBtn">&times;</span>
@@ -320,6 +329,33 @@
                 <button id="cancelWeekSelectionBtn" class="btn btn-secondary">Annuller</button>
                 <button id="confirmWeekSelectionBtn" class="btn btn-primary">Send Valgte Uger</button>
             </div>
+        </div>
+    </div>
+
+    <div id="csvExportModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close-btn" id="closeCsvExportModalBtn">&times;</span>
+            <h3 class="text-lg font-semibold mb-3">Vælg Filtre for CSV Eksport</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Vælg Uger (alle hvis ingen valgt):</label>
+                    <div id="csvWeekCheckboxesContainer" class="max-h-40 overflow-y-auto border p-2 rounded">
+                        <!-- Uge checkboxes for CSV -->
+                    </div>
+                </div>
+                <div>
+                    <label for="csvByggepladsSelect" class="block text-sm font-medium text-gray-700">Vælg Byggeplads (alle hvis ingen valgt):</label>
+                    <select id="csvByggepladsSelect" class="form-select mt-1">
+                        <option value="">-- Alle Byggepladser --</option>
+                        <!-- Byggepladser for CSV -->
+                    </select>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-2">
+                <button id="cancelCsvExportBtn" class="btn btn-secondary">Annuller</button>
+                <button id="confirmCsvExportBtn" class="btn btn-primary">Eksporter CSV</button>
+            </div>
+             <div id="csvExportStatus" class="text-sm mt-2"></div>
         </div>
     </div>
 
@@ -347,7 +383,16 @@
         const entriesTable = document.getElementById('entriesTable');
         const sendEmailBtn = document.getElementById('sendEmailBtn'); 
         const emailStatus = document.getElementById('emailStatus');
-        const exportCsvBtnModal = document.getElementById('exportCsvBtnModal'); 
+        const exportCsvBtnModal = document.getElementById('exportCsvBtnModal');  // This is the button in the settings modal
+        
+        const csvExportModal = document.getElementById('csvExportModal'); // The actual modal for CSV options
+        const closeCsvExportModalBtn = document.getElementById('closeCsvExportModalBtn');
+        const csvWeekCheckboxesContainer = document.getElementById('csvWeekCheckboxesContainer');
+        const csvByggepladsSelect = document.getElementById('csvByggepladsSelect');
+        const cancelCsvExportBtn = document.getElementById('cancelCsvExportBtn');
+        const confirmCsvExportBtn = document.getElementById('confirmCsvExportBtn');
+        const csvExportStatus = document.getElementById('csvExportStatus');
+
 
         const quickEntryDateInput = document.getElementById('quickEntryDate');
         const registerSickBtn = document.getElementById('registerSickBtn');
@@ -509,10 +554,10 @@
                 
                 if (isSlotBooked) {
                     optionStart.textContent = `${timeString} (Optaget)`;
-                    optionStart.style.color = 'red';
+                    optionStart.classList.add('time-slot-booked'); 
                 } else {
                     optionStart.textContent = timeString;
-                    optionStart.style.color = 'green';
+                    optionStart.classList.add('time-slot-available');
                 }
                 startTidSelect.appendChild(optionStart);
             }
@@ -558,10 +603,10 @@
 
                 if (isPathToThisEndBooked) {
                     option.textContent = `${timeString} (Blokeret)`;
-                    option.style.color = 'red';
+                    option.classList.add('time-slot-blocked');
                     option.disabled = true; 
                 } else {
-                    option.style.color = 'green';
+                    option.classList.add('time-slot-available');
                 }
                 slutTidSelect.appendChild(option);
             }
@@ -625,6 +670,7 @@
             const currentValue = byggepladsSelect.value;
             byggepladsSelect.innerHTML = '<option value="">-- Vælg Byggeplads --</option>';
             
+            // Add sites from settings (newly added at top due to unshift in handleAddNewSite)
             settings.siteLocations.forEach(siteInfo => {
                 const option = document.createElement('option');
                 option.value = siteInfo.site; option.textContent = siteInfo.site;
@@ -642,6 +688,9 @@
             
             if (currentValue && Array.from(byggepladsSelect.options).some(opt => opt.value === currentValue)) {
                 byggepladsSelect.value = currentValue;
+            } else if (settings.siteLocations.length > 0 && !standardByggepladsOptionsForForm.includes(currentValue) && currentValue !== "ADD_NEW_SITE") {
+                // If current value is no longer valid, try to set to the first custom site
+                // byggepladsSelect.value = settings.siteLocations[0].site;
             }
             updatePlaceringOptions();
         }
@@ -665,6 +714,7 @@
             placeringSelect.appendChild(defaultSelectOption);
 
             if (siteInfo && siteInfo.locations.length > 0) {
+                // Add locations from settings (newly added at top due to unshift in handleAddNewPlacering)
                 siteInfo.locations.forEach(location => {
                     const option = document.createElement('option');
                     option.value = location; option.textContent = location;
@@ -678,6 +728,8 @@
             
             if (currentPlaceringValue && Array.from(placeringSelect.options).some(opt => opt.value === currentPlaceringValue)) {
                 placeringSelect.value = currentPlaceringValue;
+            } else if (siteInfo && siteInfo.locations.length > 0) {
+                 // placeringSelect.value = siteInfo.locations[0]; // Optionally select first if current not valid
             }
         }
 
@@ -686,7 +738,7 @@
             if (newSiteName && newSiteName.trim() !== "") {
                 const trimmedName = newSiteName.trim();
                 if (!settings.siteLocations.find(s => s.site.toLowerCase() === trimmedName.toLowerCase())) {
-                    settings.siteLocations.push({ site: trimmedName, locations: [] });
+                    settings.siteLocations.unshift({ site: trimmedName, locations: [] }); // Add to beginning
                     settings.siteLocationsRaw = formatSiteLocations(settings.siteLocations); 
                     siteLocationsSettingsTextarea.value = settings.siteLocationsRaw; 
                     localStorage.setItem('timeRegSettings', JSON.stringify(settings)); 
@@ -723,8 +775,8 @@
                 const siteInfo = settings.siteLocations.find(s => s.site === selectedSiteName);
                 if (siteInfo) {
                     if (!siteInfo.locations.find(loc => loc.toLowerCase() === trimmedPlacering.toLowerCase())) {
-                        siteInfo.locations.push(trimmedPlacering);
-                        siteInfo.locations.sort(); 
+                        siteInfo.locations.unshift(trimmedPlacering); // Add to beginning
+                        // siteInfo.locations.sort(); // Optional: sort after adding
                         settings.siteLocationsRaw = formatSiteLocations(settings.siteLocations);
                         siteLocationsSettingsTextarea.value = settings.siteLocationsRaw; 
                         localStorage.setItem('timeRegSettings', JSON.stringify(settings));
@@ -760,7 +812,6 @@
         // --- Kern Funktionalitet (Tilføj, Slet, Render, Rediger) ---
         function renderEntries() {
             entriesBody.innerHTML = ''; 
-            // let overallTotalHours = 0; // Removed as the overall summary div is removed
             
             if (weeklyEntries.length === 0) {
                 toggleNoEntriesMessage();
@@ -862,10 +913,8 @@
                         actionsCell.appendChild(deleteButton);
                     });
                 });
-                // overallTotalHours += weeklyTotalHours; // Removed
             });
             
-            // totalHoursSpan.textContent = overallTotalHours.toFixed(2); // Removed
             saveEntriesToLocalStorage();
             toggleNoEntriesMessage();
         }
@@ -1306,21 +1355,84 @@
         }
 
         // --- CSV Eksport ---
-        function exportToCSV() {
-            if (weeklyEntries.length === 0) {
-                showStatusMessage("Ingen data at eksportere.", "error");
+        function openCsvExportModal() {
+            csvExportStatus.textContent = '';
+            if (!settings.employeeName) {
+                showStatusMessage('Udfyld og gem medarbejdernavn i indstillinger først.', 'error', csvExportStatus);
+                openSettingsModal();
                 return;
             }
+            if (weeklyEntries.length === 0) {
+                showStatusMessage('Ingen data at eksportere.', 'error', csvExportStatus);
+                return;
+            }
+
+            // Populate week checkboxes
+            const uniqueWeeks = [...new Set(weeklyEntries.map(entry => entry.uge))].sort((a,b) => a - b);
+            csvWeekCheckboxesContainer.innerHTML = '';
+            uniqueWeeks.forEach(weekNr => {
+                const label = document.createElement('label');
+                label.classList.add('block', 'mb-1', 'cursor-pointer');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = weekNr;
+                checkbox.checked = false; // Default not checked for CSV either
+                checkbox.classList.add('mr-2', 'form-checkbox');
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(` Uge ${weekNr}`));
+                csvWeekCheckboxesContainer.appendChild(label);
+            });
+
+            // Populate byggeplads dropdown
+            csvByggepladsSelect.innerHTML = '<option value="">-- Alle Byggepladser --</option>';
+            const uniqueSites = [...new Set(weeklyEntries.map(entry => entry.byggeplads))].sort();
+             // Add sites from entries (more relevant than all possible sites from settings for filtering export)
+            uniqueSites.forEach(siteName => {
+                if (siteName && !standardByggepladsOptionsForForm.includes(siteName) && siteName !== "Syg" && siteName !== "Fri" && siteName !== "Ferie") { // Filter out absence types
+                    const option = document.createElement('option');
+                    option.value = siteName;
+                    option.textContent = siteName;
+                    csvByggepladsSelect.appendChild(option);
+                }
+            });
+
+            csvExportModal.style.display = 'flex';
+        }
+
+        function closeCsvExportModal() {
+            csvExportModal.style.display = 'none';
+        }
+        
+        function processAndExportCSV() {
+            const selectedWeekNumbers = [];
+            csvWeekCheckboxesContainer.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+                selectedWeekNumbers.push(parseInt(checkbox.value));
+            });
+            const selectedByggeplads = csvByggepladsSelect.value;
+
+            let filteredEntries = [...weeklyEntries];
+
+            if (selectedWeekNumbers.length > 0) {
+                filteredEntries = filteredEntries.filter(entry => selectedWeekNumbers.includes(entry.uge));
+            }
+            if (selectedByggeplads) {
+                filteredEntries = filteredEntries.filter(entry => entry.byggeplads === selectedByggeplads);
+            }
+
+            if (filteredEntries.length === 0) {
+                showStatusMessage("Ingen data matcher de valgte filtre for eksport.", "error", csvExportStatus);
+                return;
+            }
+            closeCsvExportModal();
 
             const headers = ["Dato", "Uge", "Dag", "Byggeplads", "Placering", "Opgave", "Starttid", "Sluttid", "Pause kl. 9", "Pause kl. 12", "Timer (Netto)", "Ekstraarbejde", "Materialer", "Beskrivelse"];
             let csvContent = headers.join(";") + "\n"; 
 
-            const sortedEntriesForCsv = [...weeklyEntries].sort((a,b) => {
+            const sortedEntriesForCsv = filteredEntries.sort((a,b) => {
                  const dateComp = new Date(a.dato) - new Date(b.dato);
                 if (dateComp !== 0) return dateComp;
                 return timeToMinutes(a.startTid) - timeToMinutes(b.startTid);
             });
-
 
             sortedEntriesForCsv.forEach(entry => {
                 const row = [
@@ -1347,14 +1459,14 @@
             if (link.download !== undefined) { 
                 const url = URL.createObjectURL(blob);
                 link.setAttribute("href", url);
-                link.setAttribute("download", `tidsregistrering_${settings.employeeName.replace(/\s+/g, '_') || 'export'}_${getTodayString()}.csv`);
+                link.setAttribute("download", `tidsregistrering_${settings.employeeName.replace(/\s+/g, '_') || 'export'}_${getTodayString()}_filtreret.csv`);
                 link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                showStatusMessage("CSV-fil genereret og download startet.", "success");
+                showStatusMessage("CSV-fil genereret og download startet.", "success", csvExportStatus);
             } else {
-                showStatusMessage("CSV eksport understøttes ikke fuldt ud af din browser.", "error");
+                showStatusMessage("CSV eksport understøttes ikke fuldt ud af din browser.", "error", csvExportStatus);
             }
         }
 
@@ -1368,7 +1480,11 @@
         confirmWeekSelectionBtn.addEventListener('click', processAndSendEmail);
         cancelWeekSelectionBtn.addEventListener('click', closeWeekSelectionModal);
         closeWeekSelectionModalBtn.addEventListener('click', closeWeekSelectionModal); 
-        exportCsvBtnModal.addEventListener('click', exportToCSV);
+        
+        exportCsvBtnModal.addEventListener('click', openCsvExportModal);
+        confirmCsvExportBtn.addEventListener('click', processAndExportCSV);
+        cancelCsvExportBtn.addEventListener('click', closeCsvExportModal);
+        closeCsvExportModalBtn.addEventListener('click', closeCsvExportModal);
 
 
         registerSickBtn.addEventListener('click', () => registerAbsence('sick'));
@@ -1423,9 +1539,8 @@
                 placeringSelect.value = ""; 
             }
 
-            // Service Worker Registration
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js') // Ensure sw.js is in the same directory
+                navigator.serviceWorker.register('sw.js') 
                 .then(function(registration) {
                     console.log('Service Worker registreret med scope:', registration.scope);
                 }).catch(function(error) {

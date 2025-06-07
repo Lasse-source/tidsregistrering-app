@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tidsregistrering (Sheets Test)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Link til den NYE manifest-fil -->
+    <link rel="manifest" href="manifest-sheets.json">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tidsreg (Test)">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"> 
+    <meta name="theme-color" content="#4f46e5">
+
+    <style>
+        /* Samme CSS som før */
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .container { max-width: 800px; margin: 2rem auto; padding: 2rem; background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); position: relative; }
+        .version-number { position: absolute; bottom: 5px; right: 10px; font-size: 0.7rem; color: #9ca3af; }
+        .form-input, .form-select, .form-textarea, .form-checkbox { border-radius: 0.375rem; border: 1px solid #d1d5db; padding: 0.5rem 0.75rem; width: 100%; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25); }
+        .form-checkbox { width: auto; padding: 0; margin-right: 0.5rem; margin-left:0.25rem; border-radius: 0.25rem; color: #4f46e5; }
+        .form-checkbox:focus { outline: none; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25); border-color: #4f46e5; }
+        .form-select:disabled, .form-input:disabled { background-color: #e5e7eb; cursor: not-allowed; opacity: 0.7; }
+        .btn { padding: 0.625rem 1.25rem; border-radius: 0.375rem; font-weight: 500; transition: background-color 0.15s ease-in-out; cursor: pointer; text-align: center; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-success { background-color: #16a34a; color: white; }
+        .btn-success:hover:not(:disabled) { background-color: #15803d; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+        th, td { border: 1px solid #e5e7eb; padding: 0.4rem; text-align: left; font-size: 0.75rem; vertical-align: top; }
+        th { background-color: #f9fafb; font-weight: 600; white-space: nowrap; }
+        td .fa-pencil, td .fa-trash-can { cursor: pointer; margin-right: 8px; }
+        .week-header-row, .day-header-row { cursor: pointer; user-select: none; }
+        .week-header-row td, .day-header-row td { background-color: #f3f4f6; font-weight: bold; }
+        .day-header-row td:first-child { padding-left: 1.5rem; } 
+        .entry-row td:first-child { padding-left: 2.5rem; } 
+        .toggle-icon { margin-right: 0.5em; transition: transform 0.2s; display: inline-block; }
+        .toggle-icon.expanded { transform: rotate(90deg); }
+        .error-message { color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem; min-height: 1.25rem; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center; }
+        .modal-content { background-color: #fefefe; margin: auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 600px; border-radius: 0.5rem; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19); }
+        .modal-content h3 { margin-top: 0; }
+        .modal-content label { display: block; margin-bottom: 0.5rem; }
+        .modal-close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+        .modal-close-btn:hover, .modal-close-btn:focus { color: black; text-decoration: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- ... Hele din HTML-struktur, som den er nu, men med "Send til Google Sheets"-knap ... -->
+        
+        <div class="mt-6 flex space-x-2">
+            <button id="sendToGoogleSheetsBtn" class="btn btn-success w-full"> 
+                Send til Google Sheets
+            </button>
+        </div>
+        <p class="text-xs text-gray-500 mt-2 text-center">Sender alle nuværende registreringer. Sørg for at medarbejdernavn er gemt.</p>
+        <div id="googleSheetStatus" class="mt-2 text-center"></div>
+        
+        <div class="version-number">v1.2-sheets</div> <!-- Different version number for clarity -->
+    </div>
+    <!-- ... Resten af dine modals ... -->
+    
+    <script>
+        // ... Hele din JavaScript-kode, men med sendEmailBtn-logik fjernet og sendToGoogleSheetsBtn-logik genindført ...
+        
+        // !!! VIGTIGT: Indsæt din Google Apps Script Web App URL her !!!
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTy_x3Eh595gD3lA3dDiGWjJlKSa_kMCWvnhCyMCzWUSReGzU7x-UfHX7tdwM8vQMN/exec";
+
+        // Funktion til at sende data til Google Sheets
+        async function sendDataToGoogleSheets() {
+            googleSheetStatus.textContent = ''; 
+            if (!settings.employeeName) {
+                showStatusMessage('Udfyld og gem medarbejdernavn i indstillinger først.', 'error', googleSheetStatus);
+                openSettingsModal();
+                return;
+            }
+            if (weeklyEntries.length === 0) {
+                showStatusMessage('Ingen registreringer at sende.', 'error', googleSheetStatus);
+                return;
+            }
+            if (SCRIPT_URL === "ERSTAT_MED_DIN_GOOGLE_APPS_SCRIPT_WEB_APP_URL" || SCRIPT_URL.includes("ERSTAT_MED_DIN")) {
+                showStatusMessage("Google Apps Script URL er ikke konfigureret korrekt. Opdater scriptet med din URL.", "error", googleSheetStatus);
+                alert("Du skal først konfigurere Google Apps Script URL'en i HTML-sidens JavaScript (konstanten SCRIPT_URL).\n\nFølg vejledningen for opsætning af Google Apps Script, og sørg for at den indsatte URL er korrekt.");
+                return;
+            }
+
+            sendToGoogleSheetsBtn.disabled = true;
+            sendToGoogleSheetsBtn.textContent = "Sender...";
+
+            const dataToSend = weeklyEntries.map(entry => ({
+                medarbejderNavn: settings.employeeName, 
+                dato: entry.dato,
+                uge: entry.uge,
+                dag: entry.dag,
+                byggeplads: entry.byggeplads,
+                placering: entry.placering || '-',
+                opgave: entry.opgave || '-',
+                startTid: entry.startTid || '-',
+                slutTid: entry.slutTid || '-',
+                pause9: entry.pause9 ? "Ja" : "Nej",
+                pause12: entry.pause12 ? "Ja" : "Nej",
+                timer: entry.timer.toFixed(2),
+                ekstraarbejde: entry.ekstraarbejde ? "Ja" : "Nej",
+                materialer: entry.materialer || '-',
+                beskrivelse: entry.beskrivelse || '-'
+            }));
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'cors', 
+                    cache: 'no-cache',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ entries: dataToSend })
+                });
+                
+                let responseDataText = await response.text(); 
+                console.log("Response from Apps Script:", responseDataText);
+
+                if (response.ok) {
+                    const responseData = JSON.parse(responseDataText); 
+                    if (responseData.status === "success") {
+                        showStatusMessage('Data sendt succesfuldt til Google Sheets!', 'success', googleSheetStatus);
+                        // Ryd data efter succesfuld afsendelse
+                        if (confirm("Data er sendt succesfuldt til Google Sheets. Vil du rydde listen med registreringer?")) {
+                            weeklyEntries = [];
+                            saveEntriesToLocalStorage();
+                            renderEntries();
+                        }
+                    } else {
+                        throw new Error(responseData.message || "Ukendt fejl fra Google Apps Script.");
+                    }
+                } else {
+                    throw new Error(`Fejl ved afsendelse: ${response.status} ${response.statusText}. Server svar: ${responseDataText.substring(0,150)}...`);
+                }
+            } catch (error) {
+                console.error('Netværksfejl eller scriptfejl ved afsendelse til Google Sheets:', error);
+                showStatusMessage(`Netværksfejl: ${error.message}. Tjek konsollen og Apps Script logs.`, 'error', googleSheetStatus);
+            } finally {
+                sendToGoogleSheetsBtn.disabled = false;
+                sendToGoogleSheetsBtn.textContent = "Send til Google Sheets";
+            }
+        }
+
+        // --- Event Listeners ---
+        // ... (som før, men event listener for sendToGoogleSheetsBtn tilføjes)
+        sendToGoogleSheetsBtn.addEventListener('click', sendDataToGoogleSheets); 
+        
+        // --- Service Worker Registration ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // ... anden initialiseringskode ...
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw-sheets.js') // Link til den NYE service worker
+                .then(function(registration) {
+                    console.log('Test-version Service Worker registreret:', registration.scope);
+                }).catch(function(error) {
+                    console.log('Test-version Service Worker registrering fejlede:', error);
+                });
+            }
+        });
+    </script>
+</body>
+</html>

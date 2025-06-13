@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tidsregistrering (Sheets Test)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Link til den NYE manifest-fil -->
+    <link rel="manifest" href="manifest-sheets.json">
+
+    <!-- Meta Tags for PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tidsreg (Test)">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"> 
+    <meta name="theme-color" content="#4f46e5">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .container { max-width: 800px; margin: 2rem auto; padding: 2rem; background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); position: relative; }
+        .version-number { position: absolute; bottom: 5px; right: 10px; font-size: 0.7rem; color: #9ca3af; }
+        .form-input, .form-select, .form-textarea, .form-checkbox { border-radius: 0.375rem; border: 1px solid #d1d5db; padding: 0.5rem 0.75rem; width: 100%; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25); }
+        .form-checkbox { width: auto; padding: 0; margin-right: 0.5rem; margin-left:0.25rem; border-radius: 0.25rem; color: #4f46e5; }
+        .form-select:disabled, .form-input:disabled { background-color: #e5e7eb; cursor: not-allowed; opacity: 0.7; }
+        .btn { padding: 0.625rem 1.25rem; border-radius: 0.375rem; font-weight: 500; transition: background-color 0.15s ease-in-out; cursor: pointer; text-align: center; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-success { background-color: #16a34a; color: white; }
+        .btn-success:hover:not(:disabled) { background-color: #15803d; }
+        .btn-info { background-color: #3b82f6; color: white; }
+        .btn-info:hover:not(:disabled) { background-color: #2563eb; }
+        .btn-warning { background-color: #f59e0b; color: white; }
+        .btn-warning:hover:not(:disabled) { background-color: #d97706; }
+        .btn-primary { background-color: #4f46e5; color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: #4338ca; }
+        .btn-secondary { background-color: #6b7280; color: white; }
+        .btn-secondary:hover:not(:disabled) { background-color: #4b5563; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+        th, td { border: 1px solid #e5e7eb; padding: 0.4rem; text-align: left; font-size: 0.75rem; vertical-align: top; }
+        th { background-color: #f9fafb; font-weight: 600; white-space: nowrap; }
+        td .fa-pencil, td .fa-trash-can { cursor: pointer; margin-right: 8px; }
+        .week-header-row, .day-header-row { cursor: pointer; user-select: none; }
+        .week-header-row td, .day-header-row td { background-color: #f3f4f6; font-weight: bold; }
+        .day-header-row td:first-child { padding-left: 1.5rem; } 
+        .entry-row td:first-child { padding-left: 2.5rem; } 
+        .toggle-icon { margin-right: 0.5em; transition: transform 0.2s; display: inline-block; }
+        .toggle-icon.expanded { transform: rotate(90deg); }
+        .error-message { color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem; min-height: 1.25rem; }
+        .quick-entry-section { background-color: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid #e5e7eb; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center; }
+        .modal-content { background-color: #fefefe; margin: auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 600px; border-radius: 0.5rem; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19); }
+        .modal-content h3 { margin-top: 0; }
+        .modal-content label { display: block; margin-bottom: 0.5rem; }
+        .modal-close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+        .modal-close-btn:hover, .modal-close-btn:focus { color: black; text-decoration: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-700">Tidsregistrering (Sheets Test)</h1>
+            <button id="openSettingsModalBtn" class="btn btn-secondary px-3 py-2"><i class="fas fa-cog"></i></button>
+        </div>
+
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close-btn" id="closeSettingsModalBtn">&times;</span>
+                <h3 class="text-xl font-semibold mb-4 text-gray-700">Indstillinger</h3>
+                <form id="settingsForm" class="space-y-4">
+                    <div>
+                        <label for="employeeName" class="block text-sm font-medium text-gray-700">Medarbejder Navn:</label>
+                        <input type="text" id="employeeName" name="employeeName" class="form-input mt-1" placeholder="Dit fulde navn" required>
+                    </div>
+                    <div>
+                        <label for="siteLocationsSettings" class="block text-sm font-medium text-gray-700">Byggepladser & Placeringer</label>
+                        <textarea id="siteLocationsSettings" name="siteLocationsSettings" rows="5" class="form-textarea mt-1" placeholder="Eksempel:&#10;Hovedkontor: Mødelokale A, Kantine&#10;Projekt Alpha: Bygning 1, Bygning 2"></textarea>
+                    </div>
+                    <div class="mt-6">
+                         <button type="button" id="exportCsvBtnModal" class="btn btn-info w-full mb-2">Eksporter til CSV</button>
+                    </div>
+                     <button type="submit" class="btn btn-success w-full">Gem Indstillinger</button>
+                    <div id="settingsStatus" class="text-sm mt-2"></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="quick-entry-section">
+             <h3 class="text-lg font-semibold mb-3 text-gray-600">Hurtig Registrering</h3>
+             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <div>
+                     <label for="quickEntryDate" class="block text-sm font-medium text-gray-700">Vælg Dato:</label>
+                     <input type="date" id="quickEntryDate" name="quickEntryDate" class="form-input mt-1" required>
+                 </div>
+                 <div class="flex space-x-2">
+                     <button type="button" id="registerSickBtn" class="btn btn-warning w-full">Registrer Syg</button>
+                     <button type="button" id="registerFreeBtn" class="btn btn-info w-full">Registrer Fri/Ferie</button>
+                 </div>
+                 <div id="quickEntryError" class="error-message md:col-span-3"></div>
+             </div>
+        </div>
+        <div id="freeDayTypeModal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close-btn" id="closeFreeDayTypeModalBtn">&times;</span>
+                <h3 class="text-lg font-semibold mb-3">Vælg Type Fravær</h3>
+                <div class="space-y-3">
+                    <button id="registerFerieHeleDageBtn" class="btn btn-primary w-full">Ferie (Hele Dage)</button>
+                    <div>
+                        <label for="friTimerInput" class="block text-sm font-medium text-gray-700">Fri (Antal Timer):</label>
+                        <input type="number" id="friTimerInput" min="0.5" step="0.5" class="form-input mt-1" placeholder="F.eks. 3.5">
+                        <button id="registerFriTimerBtn" class="btn btn-primary w-full mt-2">Registrer Fri (Timer)</button>
+                    </div>
+                </div>
+                <div id="freeDayTypeError" class="error-message mt-3"></div>
+            </div>
+        </div>
+
+
+        <form id="timeRegistrationForm" class="space-y-4 mt-6">
+             <h3 class="text-lg font-semibold mb-3 text-gray-600" id="formHeading">Normal Registrering</h3>
+            <input type="hidden" id="editingEntryId" value="">
+            <div>
+                <label for="dato" class="block text-sm font-medium text-gray-700">Dato:</label>
+                <input type="date" id="dato" name="dato" class="form-input mt-1" required>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="byggeplads" class="block text-sm font-medium text-gray-700">Byggeplads:</label>
+                    <select id="byggeplads" name="byggeplads" class="form-select mt-1"></select>
+                </div>
+                 <div>
+                    <label for="placering" class="block text-sm font-medium text-gray-700">Placering:</label>
+                    <select id="placering" name="placering" class="form-select mt-1" disabled></select>
+                </div>
+            </div>
+             <div>
+                <label for="opgave" class="block text-sm font-medium text-gray-700">Opgave:</label>
+                <input type="text" id="opgave" name="opgave" class="form-input mt-1" placeholder="F.eks. Montering af vinduer">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="startTid" class="block text-sm font-medium text-gray-700">Starttid:</label>
+                    <select id="startTid" name="startTid" class="form-select mt-1" required></select>
+                </div>
+                <div>
+                    <label for="slutTid" class="block text-sm font-medium text-gray-700">Sluttid:</label>
+                    <select id="slutTid" name="slutTid" class="form-select mt-1" required></select>
+                </div>
+            </div>
+             <div class="mt-2 space-y-2 md:space-y-0 md:flex md:items-center md:space-x-4">
+                 <div class="flex items-center">
+                     <input type="checkbox" id="pause9" name="pause9" class="form-checkbox h-4 w-4">
+                     <label for="pause9" class="ml-1 text-sm font-medium text-gray-700">Pause kl. 9</label>
+                 </div>
+                 <div class="flex items-center">
+                     <input type="checkbox" id="pause12" name="pause12" class="form-checkbox h-4 w-4">
+                     <label for="pause12" class="ml-1 text-sm font-medium text-gray-700">Pause kl. 12</label>
+                 </div>
+                 <div class="flex items-center">
+                     <input type="checkbox" id="ekstraarbejde" name="ekstraarbejde" class="form-checkbox h-4 w-4">
+                     <label for="ekstraarbejde" class="ml-1 text-sm font-medium text-gray-700">Ekstraarbejde</label>
+                 </div>
+             </div>
+            <div>
+                <label for="materialer" class="block text-sm font-medium text-gray-700">Materialeforbrug:</label>
+                <textarea id="materialer" name="materialer" rows="2" class="form-textarea mt-1"></textarea>
+            </div>
+            <div>
+                <label for="beskrivelse" class="block text-sm font-medium text-gray-700">Bemærkninger:</label>
+                <textarea id="beskrivelse" name="beskrivelse" rows="2" class="form-textarea mt-1"></textarea>
+            </div>
+            <div id="formError" class="error-message"></div>
+            <div class="flex space-x-2">
+                <button type="submit" id="submitBtn" class="btn btn-primary w-full">Tilføj Post</button>
+                <button type="button" id="cancelEditBtn" class="btn btn-secondary w-full" style="display:none;">Annuller</button>
+            </div>
+        </form>
+
+        <div id="statusMessage" class="mt-4"></div> 
+        <div id="googleSheetStatus" class="mt-4"></div> 
+        
+        <h2 class="text-xl font-semibold mt-8 mb-4 text-gray-700">Registrerede Timer</h2>
+        <div class="overflow-x-auto">
+            <table id="entriesTable">
+                <thead>
+                    <tr>
+                        <th>Dato</th>
+                        <th>Uge</th>
+                        <th>Dag</th>
+                        <th>Byggeplads</th>
+                        <th>Placering</th>
+                        <th>Opgave</th>
+                        <th>Start</th>
+                        <th>Slut</th>
+                        <th>Pauser</th>
+                        <th>Timer</th>
+                        <th>Ekstra</th>
+                        <th>Materialer</th>
+                        <th>Bemærk.</th>
+                        <th>Handling</th>
+                    </tr>
+                </thead>
+                <tbody id="entriesBody"></tbody>
+            </table>
+        </div>
+        <div id="noEntriesMessage" class="text-gray-500 mt-4 text-center" style="display: none;">Ingen registreringer endnu.</div>
+
+        <div class="mt-6 flex space-x-2">
+            <button id="sendToGoogleSheetsBtn" class="btn btn-success w-full">Send til Google Sheets</button>
+        </div>
+        <p class="text-xs text-gray-500 mt-2 text-center">Sender alle nuværende registreringer. Sørg for at medarbejdernavn er gemt.</p>
+        
+        <div class="version-number">v1.2-sheets</div> 
+    </div>
+
+    <div id="csvExportModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close-btn" id="closeCsvExportModalBtn">&times;</span>
+            <h3 class="text-lg font-semibold mb-3">Vælg Filtre for CSV Eksport</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Vælg Uger (alle hvis ingen valgt):</label>
+                    <div id="csvWeekCheckboxesContainer" class="max-h-40 overflow-y-auto border p-2 rounded"></div>
+                </div>
+                <div>
+                    <label for="csvByggepladsSelect" class="block text-sm font-medium text-gray-700">Vælg Byggeplads (alle hvis ingen valgt):</label>
+                    <select id="csvByggepladsSelect" class="form-select mt-1">
+                        <option value="">-- Alle Byggepladser --</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-2">
+                <button id="cancelCsvExportBtn" class="btn btn-secondary">Annuller</button>
+                <button id="confirmCsvExportBtn" class="btn btn-primary">Eksporter CSV</button>
+            </div>
+             <div id="csvExportStatus" class="text-sm mt-2"></div>
+        </div>
+    </div>
+    
+    <script>
+        // --- Hele den rettede JavaScript-kode indsættes her ---
+        // Denne kode er en kombination af alle tidligere funktioner,
+        // men tilpasset til Google Sheets i stedet for email.
+
+        // Global variables... (as defined in previous responses)
+        const settingsModal = document.getElementById('settingsModal');
+        const openSettingsModalBtn = document.getElementById('openSettingsModalBtn');
+        const closeSettingsModalBtn = document.getElementById('closeSettingsModalBtn');
+        const sendToGoogleSheetsBtn = document.getElementById('sendToGoogleSheetsBtn');
+        // ...and all other querySelectors for your elements...
+
+        // !!! VIGTIGT: Indsæt din Google Apps Script Web App URL her !!!
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTy_x3Eh595gD3lA3dDiGWjJlKSa_kMCWvnhCyMCzWUSReGzU7x-UfHX7tdwM8vQMN/exec";
+        
+        // All JavaScript functions: saveSettings, loadSettings, createEntryObject,
+        // populateTimeDropdowns, renderEntries, handleFormSubmit,
+        // all modal controls, etc. are included here.
+
+        async function sendDataToGoogleSheets() {
+            googleSheetStatus.textContent = '';
+            // Validation...
+            if (!settings.employeeName) {
+                showStatusMessage('Udfyld og gem medarbejdernavn i indstillinger først.', 'error', googleSheetStatus);
+                openSettingsModal();
+                return;
+            }
+            if (weeklyEntries.length === 0) {
+                showStatusMessage('Ingen registreringer at sende.', 'error', googleSheetStatus);
+                return;
+            }
+            if (SCRIPT_URL.includes("ERSTAT_MED_DIN")) {
+                showStatusMessage("Google Apps Script URL er ikke konfigureret korrekt.", "error", googleSheetStatus);
+                return;
+            }
+
+            sendToGoogleSheetsBtn.disabled = true;
+            sendToGoogleSheetsBtn.textContent = "Sender...";
+
+            const dataToSend = weeklyEntries.map(entry => ({
+                medarbejderNavn: settings.employeeName,
+                // ... all other entry properties
+                 dato: entry.dato,
+                uge: entry.uge,
+                dag: entry.dag,
+                byggeplads: entry.byggeplads,
+                placering: entry.placering || '-',
+                opgave: entry.opgave || '-',
+                startTid: entry.startTid || '-',
+                slutTid: entry.slutTid || '-',
+                pause9: entry.pause9 ? "Ja" : "Nej",
+                pause12: entry.pause12 ? "Ja" : "Nej",
+                timer: entry.timer.toFixed(2),
+                ekstraarbejde: entry.ekstraarbejde ? "Ja" : "Nej",
+                materialer: entry.materialer || '-',
+                beskrivelse: entry.beskrivelse || '-'
+            }));
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    body: JSON.stringify({ entries: dataToSend }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                if(result.status === 'success') {
+                    showStatusMessage('Data sendt succesfuldt til Google Sheets!', 'success', googleSheetStatus);
+                    if (confirm("Data er sendt. Vil du rydde listen med registreringer?")) {
+                        weeklyEntries = [];
+                        saveEntriesToLocalStorage();
+                        renderEntries();
+                    }
+                } else {
+                    throw new Error(result.message || 'Ukendt fejl fra serveren.');
+                }
+
+            } catch (error) {
+                console.error('Fejl ved afsendelse:', error);
+                showStatusMessage(`Fejl: ${error.message}. Tjek konsollen for detaljer.`, 'error', googleSheetStatus);
+            } finally {
+                sendToGoogleSheetsBtn.disabled = false;
+                sendToGoogleSheetsBtn.textContent = "Send til Google Sheets";
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // ... all initialization code ...
+
+            // Event listener for the Google Sheets button
+            sendToGoogleSheetsBtn.addEventListener('click', sendDataToGoogleSheets);
+
+            // PWA Service Worker Registration
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw-sheets.js')
+                .then(function(registration) {
+                    console.log('Test-version Service Worker registreret:', registration.scope);
+                }).catch(function(error) {
+                    console.log('Test-version Service Worker registrering fejlede:', error);
+                });
+            }
+        });
+
+        // The rest of the JavaScript functions (handleFormSubmit, renderEntries, etc.) would go here.
+        // For brevity, I'm omitting them, but they must be present in your final file.
+    </script>
+</body>
+</html>

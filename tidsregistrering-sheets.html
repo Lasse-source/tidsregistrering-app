@@ -209,7 +209,7 @@
         </div>
         <p class="text-xs text-gray-500 mt-2 text-center">Sender alle nuværende registreringer. Sørg for at medarbejdernavn er gemt.</p>
         
-        <div class="version-number">v1.3-sheets</div> 
+        <div class="version-number">v1.4-sheets</div> 
     </div>
 
     <div id="csvExportModal" class="modal">
@@ -963,30 +963,45 @@
             sendToGoogleSheetsBtn.disabled = true;
             sendToGoogleSheetsBtn.textContent = "Sender...";
 
+            // Forbered data ligesom før
             const dataToSend = weeklyEntries.map(entry => ({
                 medarbejderNavn: settings.employeeName,
-                dato: entry.dato, uge: entry.uge, dag: entry.dag,
-                byggeplads: entry.byggeplads, placering: entry.placering || '-',
-                opgave: entry.opgave || '-', startTid: entry.startTid || '-',
-                slutTid: entry.slutTid || '-', pause9: entry.pause9 ? "Ja" : "Nej",
-                pause12: entry.pause12 ? "Ja" : "Nej", timer: entry.timer.toFixed(2),
+                dato: entry.dato,
+                uge: entry.uge,
+                dag: entry.dag,
+                byggeplads: entry.byggeplads,
+                placering: entry.placering || '-',
+                opgave: entry.opgave || '-',
+                startTid: entry.startTid || '-',
+                slutTid: entry.slutTid || '-',
+                pause9: entry.pause9 ? "Ja" : "Nej",
+                pause12: entry.pause12 ? "Ja" : "Nej",
+                timer: entry.timer.toFixed(2),
                 ekstraarbejde: entry.ekstraarbejde ? "Ja" : "Nej",
-                materialer: entry.materialer || '-', beskrivelse: entry.beskrivelse || '-'
+                materialer: entry.materialer || '-',
+                beskrivelse: entry.beskrivelse || '-'
             }));
 
-            try {
+         try {
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'cors',
-                    body: JSON.stringify({ entries: dataToSend }),
-                    headers: { 'Content-Type': 'application/json' }
+                    cache: 'no-cache',
+                    headers: {
+                        // Vi specificerer IKKE Content-Type: application/json
+                        // Browseren vil sende det som text/plain, hvilket er en "simple request"
+                        'Content-Type': 'text/plain;charset=utf-8', 
+                    },
+                    body: JSON.stringify(dataToSend) // Dataen er stadig i JSON format, men sendes som tekst
                 });
 
                 const responseDataText = await response.text();
-                if (!response.ok) { throw new Error(`HTTP error! status: ${response.status} - ${responseDataText}`); }
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status} - ${responseDataText}`);
+                }
 
                 const result = JSON.parse(responseDataText);
-                if(result.status === 'success') {
+                if (result.status === 'success') {
                     showStatusMessage('Data sendt succesfuldt til Google Sheets!', 'success', googleSheetStatus);
                     if (confirm("Data er sendt. Vil du rydde listen med registreringer?")) {
                         weeklyEntries = [];

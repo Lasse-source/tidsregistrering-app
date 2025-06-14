@@ -209,7 +209,7 @@
         </div>
         <p class="text-xs text-gray-500 mt-2 text-center">Sender alle nuværende registreringer. Sørg for at medarbejdernavn er gemt.</p>
         
-        <div class="version-number">v1.2-sheets</div> 
+        <div class="version-number">v1.3-sheets</div> 
     </div>
 
     <div id="csvExportModal" class="modal">
@@ -294,10 +294,11 @@
         let lastSelectedPlacering = '';
         let currentlyEditingId = null;
 
-        // !!! VIGTIGT: Indsæt din Google Apps Script Web App URL her !!!
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTy_x3Eh595gD3lA3dDiGWjJlKSa_kMCWvnhCyMCzWUSReGzU7x-UfHX7tdwM8vQMN/exec";
+        const SCRIPT_URL = "ERSTAT_MED_DIN_GOOGLE_APPS_SCRIPT_WEB_APP_URL";
         
-        // --- ALL JAVASCRIPT FUNCTIONS GO HERE ---
+        // --- ALLE JAVASCRIPT FUNKTIONER ER NU INDSAT HERUNDER ---
+        function getTodayString() { return new Date().toISOString().split('T')[0]; }
+        function getISODateString(date) { return date.toISOString().split('T')[0]; }
 
         function parseSiteLocations(text) {
             const lines = text.trim().split('\n');
@@ -348,10 +349,8 @@
             } else {
                 settings = { employeeName: '', siteLocationsRaw: '', siteLocations: [] };
             }
-            populateByggepladsDropdown();
-            updateGoogleSheetsButtonStatus();
         }
-
+        
         function updateGoogleSheetsButtonStatus() {
             sendToGoogleSheetsBtn.disabled = !settings.employeeName;
             googleSheetStatus.textContent = sendToGoogleSheetsBtn.disabled ? 'Udfyld og gem medarbejdernavn i indstillinger for at sende.' : '';
@@ -366,35 +365,585 @@
             freeDayTypeModal.style.display = 'flex';
         }
         function closeFreeDayTypeModal() { freeDayTypeModal.style.display = 'none'; }
-        
-        function getTodayString() { return new Date().toISOString().split('T')[0]; }
 
-        function populateTimeDropdowns(selectedDate) { /* As before... */ }
-        function filterSlutTidOptions() { /* As before... */ }
-        function getWeekNumber(d) { /* As before... */ }
-        function getDayName(dateString) { /* As before... */ }
-        function getDayOfWeek(dateString) { /* As before... */ }
-        function timeToMinutes(timeStr) { /* As before... */ }
-        function calculateDuration(startStr, endStr, pause9, pause12) { /* As before... */ }
-        function populateByggepladsDropdown() { /* As before... */ }
-        function updatePlaceringOptions() { /* As before... */ }
-        function handleAddNewSite() { /* As before... */ }
-        function formatSiteLocations(siteData) { /* As before... */ }
-        function handleAddNewPlacering() { /* As before... */ }
-        function showStatusMessage(message, type, element) { /* As before... */ }
-        function toggleNoEntriesMessage() { /* As before... */ }
-        function renderEntries() { /* As before... */ }
-        function toggleWeekVisibility(weekKey) { /* As before... */ }
-        function toggleDayVisibility(dateKey, weekKey) { /* As before... */ }
-        function createEntryObject(formData) { /* As before... */ }
-        function handleFormSubmit(event) { /* As before... */ }
-        function loadEntryForEdit(entryId) { /* As before... */ }
-        function resetFormAndEditingState() { /* As before... */ }
-        function registerAbsence(type, hours) { /* As before... */ }
-        function deleteEntry(entryId) { /* As before... */ }
-        function saveEntriesToLocalStorage() { /* As before... */ }
-        function loadEntriesFromLocalStorage() { /* As before... */ }
+        function populateTimeDropdowns(selectedDate) {
+            const interval = 30;
+            startTidSelect.innerHTML = '';
+            slutTidSelect.innerHTML = '';
+
+            const dayEntries = weeklyEntries.filter(entry => entry.dato === selectedDate && entry.id !== currentlyEditingId && entry.startTid && entry.slutTid);
+            const bookedSlots = dayEntries.map(entry => ({
+                start: timeToMinutes(entry.startTid),
+                end: timeToMinutes(entry.slutTid)
+            }));
+
+            for (let minutes = 6 * 60; minutes <= 17 * 60; minutes += interval) {
+                const slotStart = minutes;
+                const slotEnd = minutes + interval;
+                let isSlotBooked = false;
+
+                for (const booked of bookedSlots) {
+                    if (slotStart < booked.end && slotEnd > booked.start) {
+                        isSlotBooked = true;
+                        break;
+                    }
+                }
+                
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                const timeString = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+                
+                const optionStart = document.createElement('option');
+                optionStart.value = timeString;
+                
+                if (isSlotBooked) {
+                    optionStart.textContent = `${timeString} (Optaget)`;
+                    optionStart.style.color = 'red';
+                } else {
+                    optionStart.textContent = timeString;
+                    optionStart.style.color = 'green';
+                }
+                startTidSelect.appendChild(optionStart);
+            }
+            filterSlutTidOptions();
+        }
         
+        function filterSlutTidOptions() {
+            const selectedStartTid = startTidSelect.value.replace(" (Optaget)", "");
+            const selectedDate = datoInput.value;
+            slutTidSelect.innerHTML = '';
+
+            if (!selectedStartTid || !selectedDate) return;
+
+            const startMinutes = timeToMinutes(selectedStartTid);
+            const interval = 30;
+
+            const dayEntries = weeklyEntries.filter(entry => entry.dato === selectedDate && entry.id !== currentlyEditingId && entry.startTid && entry.slutTid);
+            const bookedSlots = dayEntries.map(entry => ({
+                start: timeToMinutes(entry.startTid),
+                end: timeToMinutes(entry.slutTid)
+            }));
+
+            for (let minutes = startMinutes + interval; minutes <= 17 * 60 + interval ; minutes += interval) {
+                if (minutes > (17*60 + 30)) continue;
+
+                const currentIntervalStart = startMinutes;
+                const currentIntervalEnd = minutes;
+                let isPathToThisEndBooked = false;
+
+                for (const booked of bookedSlots) {
+                    if (booked.start > startMinutes && booked.start < currentIntervalEnd) {
+                        isPathToThisEndBooked = true;
+                        break;
+                    }
+                }
+                
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                const timeString = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+                const option = document.createElement('option');
+                option.value = timeString;
+                option.textContent = timeString;
+
+                if (isPathToThisEndBooked) {
+                    option.textContent = `${timeString} (Blokeret)`;
+                    option.style.color = 'red';
+                    option.disabled = true;
+                } else {
+                    option.style.color = 'green';
+                }
+                slutTidSelect.appendChild(option);
+            }
+            if (slutTidSelect.options.length === 0 && selectedStartTid) {
+                const option = document.createElement('option');
+                option.textContent = "-- Ingen ledige sluttider --";
+                option.disabled = true;
+                slutTidSelect.appendChild(option);
+            }
+        }
+
+        function getWeekNumber(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        function getDayName(dateString, locale = 'da-DK') {
+            const date = new Date(dateString + 'T12:00:00');
+            return date.toLocaleDateString(locale, { weekday: 'long' });
+        }
+
+        function getDayOfWeek(dateString) {
+            const date = new Date(dateString + 'T12:00:00');
+            return (date.getDay() + 6) % 7;
+        }
+
+        function timeToMinutes(timeStr) {
+            if (!timeStr || !timeStr.includes(':')) return 0;
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function calculateDuration(startStr, endStr, pause9, pause12) {
+            if (!startStr || !endStr) return 0;
+            const cleanStartStr = startStr.replace(" (Optaget)", "");
+            const cleanEndStr = endStr.replace(/ \(Optaget\)|\(Blokeret\)/g, "");
+            const startMinutes = timeToMinutes(cleanStartStr);
+            const endMinutes = timeToMinutes(cleanEndStr);
+            if (endMinutes <= startMinutes) return 0;
+            let grossDurationMinutes = endMinutes - startMinutes;
+            let pauseDurationMinutes = 0;
+            if (pause9) {
+                const pause9Start = 9 * 60;
+                const pause9End = 9 * 60 + 30;
+                if (startMinutes < pause9End && endMinutes > pause9Start) {
+                    pauseDurationMinutes += 30;
+                }
+            }
+            if (pause12) {
+                const pause12Start = 12 * 60;
+                const pause12End = 12 * 60 + 30;
+                if (startMinutes < pause12End && endMinutes > pause12Start) {
+                    pauseDurationMinutes += 30;
+                }
+            }
+            const netDurationMinutes = grossDurationMinutes - pauseDurationMinutes;
+            return netDurationMinutes > 0 ? netDurationMinutes / 60 : 0;
+        }
+
+        function populateByggepladsDropdown() {
+            const currentValue = byggepladsSelect.value;
+            byggepladsSelect.innerHTML = '<option value="">-- Vælg Byggeplads --</option>';
+            settings.siteLocations.forEach(siteInfo => {
+                const option = document.createElement('option');
+                option.value = siteInfo.site; option.textContent = siteInfo.site;
+                byggepladsSelect.appendChild(option);
+            });
+            standardByggepladsOptionsForForm.forEach(stdOption => {
+                const option = document.createElement('option');
+                option.value = stdOption; option.textContent = stdOption;
+                byggepladsSelect.appendChild(option);
+            });
+            const addNewOption = document.createElement('option');
+            addNewOption.value = "ADD_NEW_SITE";
+            addNewOption.textContent = "Tilføj ny byggeplads...";
+            byggepladsSelect.appendChild(addNewOption);
+            if (currentValue && Array.from(byggepladsSelect.options).some(opt => opt.value === currentValue)) {
+                byggepladsSelect.value = currentValue;
+            }
+            updatePlaceringOptions();
+        }
+
+        function updatePlaceringOptions() {
+            const selectedSiteName = byggepladsSelect.value;
+            const currentPlaceringValue = placeringSelect.value;
+            placeringSelect.innerHTML = '';
+            placeringSelect.disabled = true;
+            if (!selectedSiteName || selectedSiteName === "ADD_NEW_SITE" || standardByggepladsOptionsForForm.includes(selectedSiteName)) {
+                const defaultOption = document.createElement('option');
+                defaultOption.value = "";
+                defaultOption.textContent = (selectedSiteName && selectedSiteName !== "ADD_NEW_SITE") ? '-- Ikke relevant --' : '-- Vælg Byggeplads Først --';
+                placeringSelect.appendChild(defaultOption);
+                return;
+            }
+            const siteInfo = settings.siteLocations.find(s => s.site === selectedSiteName);
+            placeringSelect.disabled = false;
+            const defaultSelectOption = document.createElement('option');
+            defaultSelectOption.value = "";
+            defaultSelectOption.textContent = "-- Vælg Placering --";
+            placeringSelect.appendChild(defaultSelectOption);
+            if (siteInfo && siteInfo.locations.length > 0) {
+                siteInfo.locations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location;
+                    option.textContent = location;
+                    placeringSelect.appendChild(option);
+                });
+            }
+            const addNewPlaceringOption = document.createElement('option');
+            addNewPlaceringOption.value = "ADD_NEW_PLACERING";
+            addNewPlaceringOption.textContent = "Tilføj ny placering...";
+            placeringSelect.appendChild(addNewPlaceringOption);
+            if (currentPlaceringValue && Array.from(placeringSelect.options).some(opt => opt.value === currentPlaceringValue)) {
+                placeringSelect.value = currentPlaceringValue;
+            }
+        }
+
+        function handleAddNewSite() {
+            const newSiteName = prompt("Indtast navn på ny byggeplads:");
+            if (newSiteName && newSiteName.trim() !== "") {
+                const trimmedName = newSiteName.trim();
+                if (!settings.siteLocations.find(s => s.site.toLowerCase() === trimmedName.toLowerCase())) {
+                    settings.siteLocations.unshift({ site: trimmedName, locations: [] });
+                    settings.siteLocationsRaw = formatSiteLocations(settings.siteLocations);
+                    siteLocationsSettingsTextarea.value = settings.siteLocationsRaw;
+                    localStorage.setItem('timeRegSettings', JSON.stringify(settings));
+                    populateByggepladsDropdown();
+                    byggepladsSelect.value = trimmedName;
+                    updatePlaceringOptions();
+                } else {
+                    alert("Denne byggeplads findes allerede.");
+                    byggepladsSelect.value = trimmedName;
+                }
+            } else {
+                byggepladsSelect.value = "";
+            }
+        }
+
+        function formatSiteLocations(siteData) {
+            return siteData.map(item => `${item.site}: ${item.locations.join(', ')}`).join('\n');
+        }
+
+        function handleAddNewPlacering() {
+            const selectedSiteName = byggepladsSelect.value;
+            if (!selectedSiteName || selectedSiteName === "ADD_NEW_SITE" || standardByggepladsOptionsForForm.includes(selectedSiteName)) {
+                alert("Vælg venligst en gyldig byggeplads først.");
+                placeringSelect.value = "";
+                return;
+            }
+            const newPlaceringName = prompt(`Indtast navn på ny placering for "${selectedSiteName}":`);
+            if (newPlaceringName && newPlaceringName.trim() !== "") {
+                const trimmedPlacering = newPlaceringName.trim();
+                const siteInfo = settings.siteLocations.find(s => s.site === selectedSiteName);
+                if (siteInfo) {
+                    if (!siteInfo.locations.find(loc => loc.toLowerCase() === trimmedPlacering.toLowerCase())) {
+                        siteInfo.locations.unshift(trimmedPlacering);
+                        settings.siteLocationsRaw = formatSiteLocations(settings.siteLocations);
+                        siteLocationsSettingsTextarea.value = settings.siteLocationsRaw;
+                        localStorage.setItem('timeRegSettings', JSON.stringify(settings));
+                        updatePlaceringOptions();
+                        placeringSelect.value = trimmedPlacering;
+                    } else {
+                        alert("Denne placering findes allerede for den valgte byggeplads.");
+                        placeringSelect.value = trimmedPlacering;
+                    }
+                }
+            } else {
+                placeringSelect.value = "";
+            }
+        }
+
+        function showStatusMessage(message, type = 'success', element = statusMessage) {
+            element.textContent = message;
+            element.className = `my-2 p-3 rounded-md text-sm ${type === 'success' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-red-100 text-red-700 border border-red-300'}`;
+            setTimeout(() => {
+                if (element.textContent === message) {
+                    element.textContent = '';
+                    element.className = element === quickEntryError ? 'error-message md:col-span-3' : (element === googleSheetStatus ? 'mt-4' : 'mt-4');
+                }
+            }, 5000);
+        }
+
+        function toggleNoEntriesMessage() {
+            noEntriesMessage.style.display = weeklyEntries.length === 0 ? 'block' : 'none';
+            entriesTable.style.display = weeklyEntries.length === 0 ? 'none' : 'table';
+        }
+
+        function renderEntries() {
+            entriesBody.innerHTML = '';
+            if (weeklyEntries.length === 0) {
+                toggleNoEntriesMessage();
+                return;
+            }
+            const entriesByWeek = weeklyEntries.reduce((acc, entry) => {
+                (acc[entry.uge] = acc[entry.uge] || []).push(entry);
+                return acc;
+            }, {});
+            const sortedWeeks = Object.keys(entriesByWeek).sort((a, b) => parseInt(a) - parseInt(b));
+            sortedWeeks.forEach(weekKey => {
+                const weekEntries = entriesByWeek[weekKey];
+                let weeklyTotalHours = 0;
+                weekEntries.forEach(e => weeklyTotalHours += e.timer);
+                const weekHeaderRow = entriesBody.insertRow();
+                weekHeaderRow.classList.add('week-header-row');
+                weekHeaderRow.dataset.week = weekKey;
+                let cell = weekHeaderRow.insertCell();
+                cell.innerHTML = `<i class="fas fa-caret-right toggle-icon"></i> Uge ${weekKey} (${weeklyTotalHours.toFixed(2)} timer)`;
+                cell.colSpan = entriesTable.tHead.rows[0].cells.length;
+                cell.addEventListener('click', () => toggleWeekVisibility(weekKey));
+                const entriesByDay = weekEntries.reduce((acc, entry) => {
+                    (acc[entry.dato] = acc[entry.dato] || []).push(entry);
+                    return acc;
+                }, {});
+                const sortedDaysInWeek = Object.keys(entriesByDay).sort((a,b) => new Date(a) - new Date(b));
+                sortedDaysInWeek.forEach(dateKey => {
+                    const dayEntries = entriesByDay[dateKey];
+                    let dailyTotalHours = 0;
+                    dayEntries.forEach(e => dailyTotalHours += e.timer);
+                    const dayHeaderRow = entriesBody.insertRow();
+                    dayHeaderRow.classList.add('day-header-row', `week-detail-${weekKey}`);
+                    dayHeaderRow.style.display = 'none';
+                    dayHeaderRow.dataset.date = dateKey;
+                    dayHeaderRow.dataset.parentWeek = weekKey;
+                    let dayCell1 = dayHeaderRow.insertCell();
+                    dayCell1.innerHTML = "&nbsp;";
+                    let dayCell2 = dayHeaderRow.insertCell();
+                    dayCell2.innerHTML = `<i class="fas fa-caret-right toggle-icon"></i> ${getDayName(dateKey)} (${dailyTotalHours.toFixed(2)} timer)`;
+                    dayCell2.colSpan = entriesTable.tHead.rows[0].cells.length -1;
+                    dayCell2.addEventListener('click', (e) => { e.stopPropagation(); toggleDayVisibility(dateKey, weekKey); });
+                    dayEntries.sort((a,b) => timeToMinutes(a.startTid) - timeToMinutes(b.startTid)).forEach((entry) => {
+                        const row = entriesBody.insertRow();
+                        row.classList.add('entry-row', `week-detail-${weekKey}`, `day-detail-${dateKey}`);
+                        row.style.display = 'none';
+                        let pauseText = "";
+                        if (entry.pause9 && entry.pause12) pauseText = "60m";
+                        else if (entry.pause9 || entry.pause12) pauseText = "30m";
+                        else pauseText = "0m";
+                        row.insertCell().textContent = new Date(entry.dato + 'T12:00:00').toLocaleDateString('da-DK', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                        row.insertCell().textContent = entry.uge;
+                        row.insertCell().textContent = entry.dag;
+                        row.insertCell().textContent = entry.byggeplads;
+                        row.insertCell().textContent = entry.placering || '-';
+                        row.insertCell().textContent = entry.opgave;
+                        row.insertCell().textContent = entry.startTid || '-';
+                        row.insertCell().textContent = entry.slutTid || '-';
+                        row.insertCell().textContent = pauseText;
+                        row.insertCell().textContent = entry.timer.toFixed(2);
+                        row.insertCell().textContent = entry.ekstraarbejde ? 'Ja' : 'Nej';
+                        const materialerCell = row.insertCell();
+                        materialerCell.textContent = entry.materialer && entry.materialer.length > 10 ? entry.materialer.substring(0, 10) + '...' : entry.materialer;
+                        if (entry.materialer && entry.materialer.length > 10) materialerCell.title = entry.materialer;
+                        const beskrivelseCell = row.insertCell();
+                        beskrivelseCell.textContent = entry.beskrivelse.length > 10 ? entry.beskrivelse.substring(0, 10) + '...' : entry.beskrivelse;
+                        if (entry.beskrivelse.length > 10) { beskrivelseCell.title = entry.beskrivelse; }
+                        const actionsCell = row.insertCell();
+                        const editButton = document.createElement('i');
+                        editButton.classList.add('fas', 'fa-pencil', 'text-blue-600', 'hover:text-blue-800');
+                        editButton.onclick = (e) => { e.stopPropagation(); loadEntryForEdit(entry.id);};
+                        actionsCell.appendChild(editButton);
+                        const deleteButton = document.createElement('i');
+                        deleteButton.classList.add('fas', 'fa-trash-can', 'text-red-600', 'hover:text-red-800');
+                        deleteButton.onclick = (e) => { e.stopPropagation(); deleteEntry(entry.id);};
+                        actionsCell.appendChild(deleteButton);
+                    });
+                });
+            });
+            saveEntriesToLocalStorage();
+            toggleNoEntriesMessage();
+        }
+
+        function toggleWeekVisibility(weekKey) {
+            const weekRows = document.querySelectorAll(`.week-detail-${weekKey}`);
+            const icon = document.querySelector(`.week-header-row[data-week="${weekKey}"] .toggle-icon`);
+            const isHidden = weekRows[0] && weekRows[0].style.display === 'none';
+            weekRows.forEach(row => {
+                if (row.classList.contains('day-header-row')) {
+                    row.style.display = isHidden ? 'table-row' : 'none';
+                }
+                if (!isHidden && row.classList.contains('entry-row')) { row.style.display = 'none'; }
+                if(!isHidden && row.classList.contains('day-header-row')){
+                    const dayIcon = row.querySelector('.toggle-icon');
+                    if(dayIcon) dayIcon.classList.remove('expanded');
+                }
+            });
+            if (icon) icon.classList.toggle('expanded', isHidden);
+        }
+
+        function toggleDayVisibility(dateKey, weekKey) {
+            const dayRows = document.querySelectorAll(`.day-detail-${dateKey}.week-detail-${weekKey}`);
+            const icon = document.querySelector(`.day-header-row[data-date="${dateKey}"] .toggle-icon`);
+            const isHidden = dayRows[0] && dayRows[0].style.display === 'none';
+            dayRows.forEach(row => { row.style.display = isHidden ? 'table-row' : 'none'; });
+            if (icon) icon.classList.toggle('expanded', isHidden);
+        }
+
+        function createEntryObject(formData) {
+            const entryDate = new Date(formData.dato + 'T12:00:00');
+            const timerToUse = (typeof formData.timer === 'number' && formData.timer !== -1) ? formData.timer : calculateDuration(formData.startTid, formData.slutTid, formData.pause9, formData.pause12);
+            return {
+                id: formData.id || Date.now() + Math.random(),
+                dato: formData.dato, uge: getWeekNumber(entryDate), dag: getDayName(formData.dato),
+                byggeplads: formData.byggeplads || '', placering: formData.placering || '',
+                opgave: formData.opgave || '',
+                startTid: formData.startTid ? formData.startTid.replace(" (Optaget)", "") : null,
+                slutTid: formData.slutTid ? formData.slutTid.replace(/ \(Optaget\)|\(Blokeret\)/g, "") : null,
+                pause9: formData.pause9 || false, pause12: formData.pause12 || false,
+                timer: timerToUse, ekstraarbejde: formData.ekstraarbejde || false,
+                materialer: formData.materialer || '', beskrivelse: formData.beskrivelse || ''
+            };
+        }
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            formError.textContent = '';
+            const startTidValue = startTidSelect.value.replace(" (Optaget)", "");
+            const slutTidValue = slutTidSelect.value.replace(/ \(Optaget\)|\(Blokeret\)/g, "");
+            const dato = datoInput.value;
+            const byggeplads = byggepladsSelect.value;
+            const placering = placeringSelect.disabled ? '' : placeringSelect.value;
+            if (!dato) { formError.textContent = 'Vælg venligst en dato.'; return; }
+            if (!byggeplads || byggeplads === "ADD_NEW_SITE") { formError.textContent = 'Vælg venligst en byggeplads.'; return; }
+            if (standardByggepladsOptionsForForm.includes(byggeplads) && (byggeplads === "Syg" || byggeplads === "Fri" || byggeplads === "Ferie")) { formError.textContent = `Brug knapperne under "Hurtig Registrering" for ${byggeplads}.`; return; }
+            if (!startTidValue || !slutTidValue) { formError.textContent = 'Udfyld venligst starttid og sluttid.'; return; }
+            if (!placeringSelect.disabled && (!placering || placering === "ADD_NEW_PLACERING")) { formError.textContent = 'Vælg venligst en placering for den valgte byggeplads.'; return; }
+            const calculatedTimer = calculateDuration(startTidValue, slutTidValue, pause9Checkbox.checked, pause12Checkbox.checked);
+            if (timeToMinutes(slutTidValue) <= timeToMinutes(startTidValue)) { formError.textContent = 'Sluttid skal være efter starttid.'; return; }
+            const dayEntries = weeklyEntries.filter(entry => entry.dato === dato && entry.id !== currentlyEditingId && entry.startTid && entry.slutTid);
+            const startMinutes = timeToMinutes(startTidValue);
+            const endMinutes = timeToMinutes(slutTidValue);
+            for (const booked of dayEntries.map(e => ({start: timeToMinutes(e.startTid), end: timeToMinutes(e.slutTid)}))) {
+                if (startMinutes < booked.end && endMinutes > booked.start) { formError.textContent = 'Den valgte tid overlapper med en eksisterende registrering.'; return; }
+            }
+            const entryData = { id: currentlyEditingId, dato: dato, byggeplads: byggeplads, placering: placering === "Andet (specificer)" ? "Andet (specificer)" : placering, opgave: opgaveInput.value.trim(), startTid: startTidValue, slutTid: slutTidValue, pause9: pause9Checkbox.checked, pause12: pause12Checkbox.checked, timer: calculatedTimer, ekstraarbejde: ekstraarbejdeCheckbox.checked, materialer: materialerInput.value.trim(), beskrivelse: beskrivelseInput.value.trim() };
+            const newOrUpdatedEntry = createEntryObject(entryData);
+            if (currentlyEditingId) {
+                const index = weeklyEntries.findIndex(e => e.id === currentlyEditingId);
+                if (index > -1) { weeklyEntries[index] = newOrUpdatedEntry; }
+                showStatusMessage('Post opdateret succesfuldt!');
+            } else {
+                weeklyEntries.push(newOrUpdatedEntry);
+                showStatusMessage('Post tilføjet succesfuldt!');
+            }
+            lastSelectedByggeplads = byggeplads;
+            lastSelectedPlacering = placeringSelect.disabled ? '' : placering;
+            resetFormAndEditingState();
+            renderEntries();
+        }
+
+        function loadEntryForEdit(entryId) {
+            const entry = weeklyEntries.find(e => e.id === entryId);
+            if (!entry) return;
+            currentlyEditingId = entryId;
+            formHeading.textContent = "Rediger Registrering";
+            submitBtn.textContent = "Gem Ændringer";
+            cancelEditBtn.style.display = 'inline-block';
+            datoInput.value = entry.dato;
+            byggepladsSelect.value = entry.byggeplads;
+            updatePlaceringOptions();
+            placeringSelect.value = entry.placering || "";
+            opgaveInput.value = entry.opgave;
+            populateTimeDropdowns(entry.dato);
+            if (entry.startTid) {
+                let cleanStartTime = entry.startTid.replace(" (Optaget)", "");
+                let startOptionExists = Array.from(startTidSelect.options).some(opt => opt.value === cleanStartTime || opt.value === entry.startTid);
+                if (!startOptionExists) {
+                    const opt = document.createElement('option'); opt.value = cleanStartTime; opt.textContent = cleanStartTime;
+                    startTidSelect.insertBefore(opt, startTidSelect.firstChild);
+                }
+                startTidSelect.value = cleanStartTime;
+            }
+            filterSlutTidOptions();
+            if (entry.slutTid) {
+                let cleanEndTime = entry.slutTid.replace(/ \(Optaget\)|\(Blokeret\)/g, "");
+                let endOptionExists = Array.from(slutTidSelect.options).some(opt => opt.value === cleanEndTime || opt.value === entry.slutTid);
+                if(!endOptionExists){
+                    const opt = document.createElement('option'); opt.value = cleanEndTime; opt.textContent = cleanEndTime;
+                    slutTidSelect.insertBefore(opt, slutTidSelect.firstChild);
+                }
+                slutTidSelect.value = cleanEndTime;
+            }
+            pause9Checkbox.checked = entry.pause9 || false;
+            pause12Checkbox.checked = entry.pause12 || false;
+            ekstraarbejdeCheckbox.checked = entry.ekstraarbejde || false;
+            materialerInput.value = entry.materialer || '';
+            beskrivelseInput.value = entry.beskrivelse || '';
+            window.scrollTo({ top: timeRegistrationForm.offsetTop - 20, behavior: 'smooth' });
+        }
+
+        function resetFormAndEditingState() {
+            timeRegistrationForm.reset();
+            currentlyEditingId = null;
+            formHeading.textContent = "Normal Registrering";
+            submitBtn.textContent = "Tilføj Post";
+            cancelEditBtn.style.display = 'none';
+            datoInput.value = getTodayString();
+            if (lastSelectedByggeplads) { byggepladsSelect.value = lastSelectedByggeplads; }
+            else { byggepladsSelect.value = ""; }
+            updatePlaceringOptions();
+            if (lastSelectedPlacering && !placeringSelect.disabled) { placeringSelect.value = lastSelectedPlacering; }
+            else { placeringSelect.value = ""; }
+            populateTimeDropdowns(datoInput.value);
+        }
+
+        function registerAbsence(type, hours = null) {
+            quickEntryError.textContent = '';
+            freeDayTypeError.textContent = '';
+            const dato = quickEntryDateInput.value;
+            if (!dato) { showStatusMessage('Vælg venligst en dato for fravær.', 'error', quickEntryError); return; }
+            const dayOfWeek = getDayOfWeek(dato);
+            if (dayOfWeek >= 5 && (type === 'sick' || type === 'ferie-hele-dage')) { showStatusMessage('Syg/Ferie kan kun registreres på hverdage (man-fre).', 'error', quickEntryError); return; }
+            let timerValue;
+            let description;
+            let byggepladsVal;
+            if (type === 'sick') {
+                timerValue = (dayOfWeek === 4) ? 5 : 8;
+                description = "Syg";
+                byggepladsVal = "Syg";
+            } else if (type === 'ferie-hele-dage') {
+                timerValue = (dayOfWeek === 4) ? 5 : 8;
+                description = "Ferie (Hele dage)";
+                byggepladsVal = "Ferie";
+            } else if (type === 'fri-timer') {
+                if (hours === null || isNaN(parseFloat(hours)) || parseFloat(hours) <= 0) { showStatusMessage('Indtast venligst et gyldigt antal timer for "Fri (timer)".', 'error', freeDayTypeError); return; }
+                timerValue = parseFloat(hours);
+                description = `Fri (${timerValue} timer)`;
+                byggepladsVal = "Fri";
+            } else { return; }
+            const entryData = createEntryObject({ dato: dato, byggeplads: byggepladsVal, placering: '-', opgave: description, startTid: null, slutTid: null, timer: timerValue, pause9: false, pause12: false, ekstraarbejde: false, beskrivelse: description, materialer: '' });
+            weeklyEntries.push(entryData);
+            renderEntries();
+            populateTimeDropdowns(datoInput.value);
+            showStatusMessage(`${description} registreret for ${new Date(dato + 'T12:00:00').toLocaleDateString('da-DK')}.`);
+            closeFreeDayTypeModal();
+        }
+
+        function deleteEntry(entryId) {
+            if (confirm('Er du sikker på, du vil slette denne post?')) {
+                const entryDate = weeklyEntries.find(e => e.id === entryId)?.dato;
+                weeklyEntries = weeklyEntries.filter(entry => entry.id !== entryId);
+                if (currentlyEditingId === entryId) { resetFormAndEditingState(); }
+                renderEntries();
+                if (entryDate === datoInput.value || datoInput.value === getTodayString()) { populateTimeDropdowns(datoInput.value); }
+                showStatusMessage('Post slettet.', 'error');
+            }
+        }
+
+        function saveEntriesToLocalStorage() {
+            localStorage.setItem('weeklyTimeEntries', JSON.stringify(weeklyEntries));
+        }
+
+        function loadEntriesFromLocalStorage() {
+            const storedEntries = localStorage.getItem('weeklyTimeEntries');
+            if (storedEntries) {
+                weeklyEntries = JSON.parse(storedEntries);
+                weeklyEntries.forEach(entry => {
+                    entry.id = entry.id || Date.now() + Math.random();
+                    entry.timer = parseFloat(entry.timer) || 0;
+                    entry.ekstraarbejde = !!entry.ekstraarbejde;
+                    entry.pause9 = !!entry.pause9;
+                    entry.pause12 = !!entry.pause12;
+                    entry.materialer = entry.materialer || '';
+                });
+            } else {
+                loadTestDataIfEmpty(); // Load test data if nothing is in storage
+            }
+        }
+
+        function loadTestDataIfEmpty() {
+            if (weeklyEntries.length > 0) return; // Don't load if there's already data
+            console.log("Ingen gemte data fundet. Indlæser testdata for en fiktiv uge.");
+            const today = new Date();
+            const monday = new Date(today);
+            monday.setDate(monday.getDate() - (today.getDay() + 6) % 7);
+
+            const testEntriesRaw = [
+                { dato: getISODateString(monday), byggeplads: "Projekt Alpha", placering: "Bygning 1", opgave: "Opsætning af vægge", startTid: "07:00", slutTid: "15:00", pause9: true, pause12: true, ekstraarbejde: false, materialer: "20 gipsplader, 500 skruer", beskrivelse: "" },
+                { dato: getISODateString(new Date(monday).setDate(monday.getDate() + 1)), byggeplads: "Hovedkontor", placering: "Mødelokale A", opgave: "Maling af loft", startTid: "08:00", slutTid: "16:00", pause9: true, pause12: true, ekstraarbejde: false, materialer: "10L hvid maling", beskrivelse: "To lag" },
+                { dato: getISODateString(new Date(monday).setDate(monday.getDate() + 2)), byggeplads: "Projekt Alpha", placering: "Bygning 2 - Etage 3", opgave: "Installation af el", startTid: "07:30", slutTid: "12:00", pause9: true, pause12: false, ekstraarbejde: true, materialer: "50m kabel", beskrivelse: "" },
+                { dato: getISODateString(new Date(monday).setDate(monday.getDate() + 2)), byggeplads: "Værksted", placering: "-", opgave: "Klargøring af materialer", startTid: "12:30", slutTid: "16:00", pause9: false, pause12: false, ekstraarbejde: false, materialer: "", beskrivelse: "" },
+                { dato: getISODateString(new Date(monday).setDate(monday.getDate() + 3)), byggeplads: "Syg", placering: "-", opgave: "Syg", timer: 8 },
+                { dato: getISODateString(new Date(monday).setDate(monday.getDate() + 4)), byggeplads: "Projekt Alpha", placering: "Bygning 1", opgave: "Færdiggørelse af vægge", startTid: "07:00", slutTid: "12:00", pause9: true, pause12: false, ekstraarbejde: false, materialer: "", beskrivelse: "Klar til spartling" },
+            ];
+            
+            testEntriesRaw.forEach(entry => {
+                const newEntry = createEntryObject(entry);
+                if (entry.timer) newEntry.timer = entry.timer; // Preserve special hours for Syg/Fri
+                weeklyEntries.push(newEntry);
+            });
+            saveEntriesToLocalStorage(); 
+        }
+
         async function sendDataToGoogleSheets() {
             googleSheetStatus.textContent = '';
             if (!settings.employeeName) {
@@ -416,20 +965,13 @@
 
             const dataToSend = weeklyEntries.map(entry => ({
                 medarbejderNavn: settings.employeeName,
-                dato: entry.dato,
-                uge: entry.uge,
-                dag: entry.dag,
-                byggeplads: entry.byggeplads,
-                placering: entry.placering || '-',
-                opgave: entry.opgave || '-',
-                startTid: entry.startTid || '-',
-                slutTid: entry.slutTid || '-',
-                pause9: entry.pause9 ? "Ja" : "Nej",
-                pause12: entry.pause12 ? "Ja" : "Nej",
-                timer: entry.timer.toFixed(2),
+                dato: entry.dato, uge: entry.uge, dag: entry.dag,
+                byggeplads: entry.byggeplads, placering: entry.placering || '-',
+                opgave: entry.opgave || '-', startTid: entry.startTid || '-',
+                slutTid: entry.slutTid || '-', pause9: entry.pause9 ? "Ja" : "Nej",
+                pause12: entry.pause12 ? "Ja" : "Nej", timer: entry.timer.toFixed(2),
                 ekstraarbejde: entry.ekstraarbejde ? "Ja" : "Nej",
-                materialer: entry.materialer || '-',
-                beskrivelse: entry.beskrivelse || '-'
+                materialer: entry.materialer || '-', beskrivelse: entry.beskrivelse || '-'
             }));
 
             try {
@@ -441,9 +983,7 @@
                 });
 
                 const responseDataText = await response.text();
-                if (!response.ok) {
-                    throw new Error(`Fejl ved afsendelse: ${response.status} ${response.statusText}. Svar: ${responseDataText}`);
-                }
+                if (!response.ok) { throw new Error(`HTTP error! status: ${response.status} - ${responseDataText}`); }
 
                 const result = JSON.parse(responseDataText);
                 if(result.status === 'success') {
@@ -456,7 +996,6 @@
                 } else {
                     throw new Error(result.message || 'Ukendt fejl fra serveren.');
                 }
-
             } catch (error) {
                 console.error('Fejl ved afsendelse:', error);
                 showStatusMessage(`Fejl: ${error.message}. Tjek konsollen.`, 'error', googleSheetStatus);
@@ -465,11 +1004,11 @@
                 sendToGoogleSheetsBtn.textContent = "Send til Google Sheets";
             }
         }
-
+        
         function openCsvExportModal() { /* As before... */ }
         function closeCsvExportModal() { /* As before... */ }
         function processAndExportCSV() { /* As before... */ }
-        
+
         // --- Event Listeners ---
         openSettingsModalBtn.addEventListener('click', openSettingsModal);
         closeSettingsModalBtn.addEventListener('click', closeSettingsModal);
@@ -489,28 +1028,15 @@
             const hours = friTimerInput.value;
             registerAbsence('fri-timer', hours);
         });
-        byggepladsSelect.addEventListener('change', (event) => { /* As before... */ });
-        placeringSelect.addEventListener('change', (event) => { /* As before... */ });
+        byggepladsSelect.addEventListener('change', (event) => {
+            if (event.target.value === "ADD_NEW_SITE") { handleAddNewSite(); }
+            else { updatePlaceringOptions(); lastSelectedPlacering = ''; placeringSelect.value = ''; }
+        });
+        placeringSelect.addEventListener('change', (event) => {
+            if (event.target.value === "ADD_NEW_PLACERING") { handleAddNewPlacering(); }
+        });
         datoInput.addEventListener('change', () => populateTimeDropdowns(datoInput.value));
         startTidSelect.addEventListener('change', filterSlutTidOptions);
-
-        // --- Initialisering ---
-        document.addEventListener('DOMContentLoaded', () => {
-            const today = getTodayString();
-            datoInput.value = today;
-            quickEntryDateInput.value = today;
-            loadSettings(); 
-            populateTimeDropdowns(today);
-            loadEntriesFromLocalStorage();
-            renderEntries();
-            if (lastSelectedByggeplads) { byggepladsSelect.value = lastSelectedByggeplads; updatePlaceringOptions(); }
-            if (lastSelectedPlacering && !placeringSelect.disabled) { placeringSelect.value = lastSelectedPlacering; }
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw-sheets.js')
-                .then(reg => console.log('Test-version Service Worker registreret:', reg.scope))
-                .catch(err => console.log('Test-version Service Worker registrering fejlede:', err));
-            }
-        });
     </script>
 </body>
 </html>

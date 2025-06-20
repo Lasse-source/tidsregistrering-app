@@ -1274,10 +1274,10 @@
                 if (currentDate > lastDateOverall) lastDateOverall = currentDate;
             });
 
-
             const weekRangeSubject = selectedWeekNumbers.length > 1 ? `Uge ${Math.min(...selectedWeekNumbers)}-${Math.max(...selectedWeekNumbers)}` : `Uge ${selectedWeekNumbers[0]}`;
             const subject = `Timeseddel ${weekRangeSubject} - ${settings.employeeName}`;
             
+            // UGESEDDEL (summarisk) - uændret
             let ugeseddelBody = `UGESEDDEL\n`;
             ugeseddelBody += `Medarbejder: ${settings.employeeName}\n`;
             ugeseddelBody += `Periode: ${firstDateOverall.toLocaleDateString('da-DK')} - ${lastDateOverall.toLocaleDateString('da-DK')} (${weekRangeSubject})\n`;
@@ -1302,41 +1302,55 @@
             ugeseddelBody += `--------------------------------------------------\n`;
             ugeseddelBody += `TOTAL TIMER FOR VALGT PERIODE: ${grandTotalSelectedHours.toFixed(2)}\n\n\n`;
 
+            // ** START PÅ ÆNDRET ARBEJDSSEDDEL **
             let arbejdseddelBody = `ARBEJDSSEDDEL\n`;
             arbejdseddelBody += `Medarbejder: ${settings.employeeName}\n`;
             arbejdseddelBody += `Periode: ${firstDateOverall.toLocaleDateString('da-DK')} - ${lastDateOverall.toLocaleDateString('da-DK')} (${weekRangeSubject})\n`;
             arbejdseddelBody += `--------------------------------------------------\n\nDetaljerede Registreringer:\n\n`;
 
-            const entriesBySite = filteredEntries.reduce((acc, entry) => {
-                (acc[entry.byggeplads] = acc[entry.byggeplads] || []).push(entry);
+            // 1. Grupper data efter byggeplads og derefter placering
+            const entriesBySiteAndPlacering = filteredEntries.reduce((acc, entry) => {
+                const siteName = entry.byggeplads;
+                const placeringName = entry.placering || 'Ikke specificeret';
+
+                if (!acc[siteName]) {
+                    acc[siteName] = { totalHours: 0, placeringer: {} };
+                }
+                if (!acc[siteName].placeringer[placeringName]) {
+                    acc[siteName].placeringer[placeringName] = { totalHours: 0, entries: [] };
+                }
+
+                acc[siteName].totalHours += entry.timer;
+                acc[siteName].placeringer[placeringName].totalHours += entry.timer;
+                acc[siteName].placeringer[placeringName].entries.push(entry);
                 return acc;
             }, {});
 
-            Object.keys(entriesBySite).sort().forEach(siteKey => {
-                arbejdseddelBody += `BYGGEPLADS: ${siteKey}\n`;
-                const siteEntries = entriesBySite[siteKey];
-                siteEntries.sort((a,b) => {
-                    const dateComp = new Date(a.dato) - new Date(b.dato);
-                    if (dateComp !== 0) return dateComp;
-                    return timeToMinutes(a.startTid) - timeToMinutes(b.startTid);
-                }).forEach(entry => {
-                    const entryDateFormatted = new Date(entry.dato + 'T12:00:00').toLocaleDateString('da-DK', {day:'2-digit', month:'2-digit'});
-                    const timeInfo = (entry.startTid && entry.slutTid) ? `${entry.startTid}-${entry.slutTid}` : 'Hele dagen';
-                    const extraMarker = entry.ekstraarbejde ? ' (Ekstra)' : '';
-                    const placeringText = entry.placering === "Andet (specificer)" ? "Andet (specificer)" : (entry.placering || '-');
-                    let pauseInfo = "";
-                    if(entry.pause9 && entry.pause12) pauseInfo = " (Pause: 60 min)";
-                    else if(entry.pause9 || entry.pause12) pauseInfo = " (Pause: 30 min)";
+            // 2. Byg strengen op fra den nye datastruktur
+            Object.keys(entriesBySiteAndPlacering).sort().forEach(siteKey => {
+                const siteData = entriesBySiteAndPlacering[siteKey];
+                arbejdseddelBody += `BYGGEPLADS: ${siteKey} (tid ${siteData.totalHours.toFixed(2)})\n\n`;
+                
+                Object.keys(siteData.placeringer).sort().forEach(placeringKey => {
+                    const placeringData = siteData.placeringer[placeringKey];
+                    arbejdseddelBody += `  Placering: ${placeringKey} (${placeringData.totalHours.toFixed(2)})\n`;
+                    
+                    placeringData.entries.sort((a,b) => {
+                        const dateComp = new Date(a.dato) - new Date(b.dato);
+                        if (dateComp !== 0) return dateComp;
+                        return timeToMinutes(a.startTid) - timeToMinutes(b.startTid);
+                    }).forEach(entry => {
+                        const entryDateFormatted = new Date(entry.dato + 'T12:00:00').toLocaleDateString('da-DK', {day:'2-digit', month:'2-digit'});
+                        const extraMarker = entry.ekstraarbejde ? ' (Ekstra)' : '';
 
-                    arbejdseddelBody += `  Dato: ${entryDateFormatted} (${entry.dag.substring(0,3)}) - Opgave: ${entry.opgave || '-'}\n`;
-                    arbejdseddelBody += `    Tid: ${timeInfo}${pauseInfo} - Timer: ${entry.timer.toFixed(2)}${extraMarker}\n`;
-                    if (entry.placering && entry.placering !== '-') arbejdseddelBody += `    Placering: ${placeringText}\n`;
-                    if (entry.materialer) { arbejdseddelBody += `    Materialer: ${entry.materialer}\n`;}
-                    if (entry.beskrivelse) { arbejdseddelBody += `    Bemærkning: ${entry.beskrivelse}\n`; }
+                        arbejdseddelBody += `    Dato: ${entryDateFormatted} (${entry.dag.substring(0,3)}) - Opgave: ${entry.opgave || '-'} - Timer: ${entry.timer.toFixed(2)}${extraMarker}\n`;
+                    });
                     arbejdseddelBody += `  --------------------------------------\n`;
                 });
                 arbejdseddelBody += `\n`; 
             });
+
+            // ** SLUT PÅ ÆNDRET ARBEJDSSEDDEL **
             
             const combinedBody = ugeseddelBody + arbejdseddelBody + `\nGenereret via Tidsregistreringsværktøj\n`;
             let mailtoLink = `mailto:${settings.recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(combinedBody)}`;

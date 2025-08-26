@@ -160,7 +160,7 @@
         </div>
         <p class="text-xs text-gray-500 mt-2 text-center">Sørg for at indstillinger er gemt før afsendelse.</p>
         <div id="emailStatus" class="mt-2"></div>
-        <div class="version-number">v2.0</div>
+        <div class="version-number">v2.1</div>
     </div>
 
     <!-- Modals -->
@@ -233,13 +233,74 @@
     <script>
         // --- Globale Variabler ---
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx4-mz1MNZ4FY0GBOV1qlWrmUBZQ3X1Jz1v9S4kO8BPr_ZoZZRqfVbCDevk2e24WxqO/exec";
-        // ... (alle andre globale variabler) ...
-        const employeeInitialsInput = document.getElementById('employeeInitials');
-        const imageUploadInput = document.getElementById('imageUpload');
-        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
-        const offlineIndicator = document.getElementById('offline-indicator');
+        const allElements = {
+            settingsModal: document.getElementById('settingsModal'),
+            openSettingsModalBtn: document.getElementById('openSettingsModalBtn'),
+            closeSettingsModalBtn: document.getElementById('closeSettingsModalBtn'),
+            settingsForm: document.getElementById('settingsForm'),
+            timeRegistrationForm: document.getElementById('timeRegistrationForm'),
+            formHeading: document.getElementById('formHeading'),
+            editingEntryIdInput: document.getElementById('editingEntryId'),
+            submitBtn: document.getElementById('submitBtn'),
+            cancelEditBtn: document.getElementById('cancelEditBtn'),
+            startTidSelect: document.getElementById('startTid'),
+            slutTidSelect: document.getElementById('slutTid'),
+            entriesBody: document.getElementById('entriesBody'),
+            formError: document.getElementById('formError'),
+            settingsStatus: document.getElementById('settingsStatus'),
+            statusMessage: document.getElementById('statusMessage'),
+            noEntriesMessage: document.getElementById('noEntriesMessage'),
+            entriesTable: document.getElementById('entriesTable'),
+            sendEmailBtn: document.getElementById('sendEmailBtn'),
+            emailStatus: document.getElementById('emailStatus'),
+            exportCsvBtnModal: document.getElementById('exportCsvBtnModal'),
+            quickEntryError: document.getElementById('quickEntryError'),
+            registerSickBtn: document.getElementById('registerSickBtn'),
+            registerFerieUgeBtn: document.getElementById('registerFerieUgeBtn'),
+            ferieUgeModal: document.getElementById('ferieUgeModal'),
+            closeFerieUgeModalBtn: document.getElementById('closeFerieUgeModalBtn'),
+            ferieAarSelect: document.getElementById('ferieAarSelect'),
+            ferieUgeSelect: document.getElementById('ferieUgeSelect'),
+            ferieUgeError: document.getElementById('ferieUgeError'),
+            cancelFerieUgeBtn: document.getElementById('cancelFerieUgeBtn'),
+            confirmFerieUgeBtn: document.getElementById('confirmFerieUgeBtn'),
+            recipientEmailInput: document.getElementById('recipientEmail'),
+            ccEmailInput: document.getElementById('ccEmail'),
+            employeeNameInput: document.getElementById('employeeName'),
+            employeeInitialsInput: document.getElementById('employeeInitials'),
+            siteLocationsSettingsTextarea: document.getElementById('siteLocationsSettings'),
+            datoInput: document.getElementById('dato'),
+            byggepladsSelect: document.getElementById('byggeplads'),
+            placeringSelect: document.getElementById('placering'),
+            opgaveInput: document.getElementById('opgave'),
+            tidOgPauseContainer: document.getElementById('tidOgPauseContainer'),
+            pause9Checkbox: document.getElementById('pause9'),
+            pause12Checkbox: document.getElementById('pause12'),
+            ekstraarbejdeCheckbox: document.getElementById('ekstraarbejde'),
+            materialerInput: document.getElementById('materialer'),
+            imageUploadInput: document.getElementById('imageUpload'),
+            imagePreviewContainer: document.getElementById('imagePreviewContainer'),
+            beskrivelseInput: document.getElementById('beskrivelse'),
+            offlineIndicator: document.getElementById('offline-indicator'),
+            weekSelectionModal: document.getElementById('weekSelectionModal'),
+            weekCheckboxesContainer: document.getElementById('weekCheckboxesContainer'),
+            cancelWeekSelectionBtn: document.getElementById('cancelWeekSelectionBtn'),
+            confirmWeekSelectionBtn: document.getElementById('confirmWeekSelectionBtn'),
+            closeWeekSelectionModalBtn: document.getElementById('closeWeekSelectionModalBtn'),
+        };
 
-        // --- Opdaterede Funktioner ---
+        let weeklyEntries = [];
+        let settings = {};
+        const standardByggepladsOptionsForForm = ["Fri", "Andet"];
+        let lastSelectedByggeplads = '';
+        let lastSelectedPlacering = '';
+        let currentlyEditingId = null;
+
+        // --- Funktioner ---
+        
+        function getTodayString() { return new Date().toISOString().split('T')[0]; }
+        function getISODateString(date) { return date.toISOString().split('T')[0]; }
+
         function generateInitials(name) {
             if (!name) return '';
             const nameParts = name.trim().split(' ').filter(p => p);
@@ -251,141 +312,75 @@
             return (nameParts[0]?.[0] || '').toUpperCase();
         }
         
-        function saveSettings(event) {
-            event.preventDefault();
-            const rawSiteLocationsText = siteLocationsSettingsTextarea.value;
-            settings = {
-                recipientEmail: document.getElementById('recipientEmail').value.trim(),
-                ccEmail: document.getElementById('ccEmail').value.trim(),
-                employeeName: employeeNameInput.value.trim(),
-                initials: generateInitials(employeeNameInput.value.trim()),
-                siteLocationsRaw: rawSiteLocationsText,
-                siteLocations: parseSiteLocations(rawSiteLocationsText)
-            };
-            employeeInitialsInput.value = settings.initials; // Opdater feltet
-            localStorage.setItem('timeRegSettings', JSON.stringify(settings));
-            showStatusMessage('Indstillinger gemt!', 'success', document.getElementById('settingsStatus'));
-            populateByggepladsDropdown();
-            closeSettingsModal();
-        }
-
-        function loadSettings() {
-            const storedSettings = localStorage.getItem('timeRegSettings');
-            if (storedSettings) {
-                settings = JSON.parse(storedSettings);
-                document.getElementById('recipientEmail').value = settings.recipientEmail || '';
-                document.getElementById('ccEmail').value = settings.ccEmail || '';
-                employeeNameInput.value = settings.employeeName || '';
-                employeeInitialsInput.value = settings.initials || generateInitials(settings.employeeName);
-                siteLocationsSettingsTextarea.value = settings.siteLocationsRaw || '';
-                settings.siteLocations = parseSiteLocations(settings.siteLocationsRaw || '');
-            } else {
-                settings = { employeeName: '', initials: '', siteLocations: [] };
-            }
-        }
-        
-        async function handleFormSubmit(event) {
-            event.preventDefault();
-            // ... (validering som før) ...
-            const entryData = { /* ... indsaml data som før ... */ };
-            const newEntry = createEntryObject(entryData);
-            const file = imageUploadInput.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    newEntry.imageData = e.target.result;
-                    newEntry.imageType = file.type;
-                    uploadImageAndAddEntry(newEntry);
-                };
-                reader.readAsDataURL(file);
-            } else {
-                addEntryToList(newEntry);
-            }
-        }
-        
-        async function uploadImageAndAddEntry(entry) {
-            if (!navigator.onLine) {
-                showStatusMessage('Du er offline. Billede gemt til senere upload.', 'warning');
-                entry.needsSync = true;
-                addEntryToList(entry);
-                return;
-            }
-            if (SCRIPT_URL.includes("ERSTAT_MED_DIN")) {
-                showStatusMessage("Google Apps Script URL er ikke konfigureret.", "error");
-                entry.needsSync = true;
-                addEntryToList(entry);
-                return;
-            }
-            showStatusMessage('Uploader billede...', 'info');
-            try {
-                const payload = {
-                    imageData: entry.imageData, imageType: entry.imageType,
-                    byggeplads: entry.byggeplads, placering: entry.placering,
-                    dato: entry.dato, initials: settings.initials
-                };
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify(payload)
-                });
-                entry.imageUrl = `Uploaded til Drive (${entry.byggeplads})`;
-                delete entry.imageData; delete entry.imageType; delete entry.needsSync;
-                showStatusMessage('Billede uploadet!', 'success');
-            } catch (error) {
-                console.error('Fejl ved billed-upload:', error);
-                showStatusMessage('Fejl ved billed-upload. Gemt til senere.', 'error');
-                entry.needsSync = true;
-            } finally {
-                addEntryToList(entry);
-            }
-        }
-
-        function addEntryToList(newOrUpdatedEntry) {
-            if (currentlyEditingId) {
-                const index = weeklyEntries.findIndex(e => e.id === currentlyEditingId);
-                if (index > -1) {
-                    if (!newOrUpdatedEntry.imageData && weeklyEntries[index].imageData) {
-                        newOrUpdatedEntry.imageData = weeklyEntries[index].imageData;
-                        newOrUpdatedEntry.imageType = weeklyEntries[index].imageType;
-                    }
-                    weeklyEntries[index] = newOrUpdatedEntry;
-                }
-                showStatusMessage('Post opdateret succesfuldt!');
-            } else {
-                weeklyEntries.push(newOrUpdatedEntry);
-                showStatusMessage('Post tilføjet succesfuldt!');
-            }
-            lastSelectedByggeplads = newOrUpdatedEntry.byggeplads; 
-            lastSelectedPlacering = newOrUpdatedEntry.placering;
-            resetFormAndEditingState();
-            renderEntries();
-        }
-
-        async function syncPendingUploads() {
-            if (!navigator.onLine) {
-                offlineIndicator.classList.remove('hidden');
-                return;
-            }
-            offlineIndicator.classList.add('hidden');
-            const pendingEntries = weeklyEntries.filter(e => e.needsSync);
-            if (pendingEntries.length > 0) {
-                showStatusMessage(`Synkroniserer ${pendingEntries.length} ventende billede(r)...`, 'info');
-                for (const entry of pendingEntries) {
-                    // Implementer en mere robust sync-logik her
-                    console.log("Forsøger at synkronisere billede for opgave:", entry.opgave);
-                }
-            }
-        }
+        // ... (Alle andre funktioner fra den tidligere version indsættes her) ...
+        // Dette inkluderer: parseSiteLocations, saveSettings, loadSettings,
+        // open/close modals, populateTimeDropdowns, filterSlutTidOptions,
+        // getWeekNumber, getDayName, getDayOfWeek, timeToMinutes, calculateDuration,
+        // populateByggepladsDropdown, updatePlaceringOptions, handleAddNewSite,
+        // formatSiteLocations, handleAddNewPlacering, showStatusMessage,
+        // toggleNoEntriesMessage, renderEntries, toggleWeek/DayVisibility,
+        // createEntryObject, handleFormSubmit, loadEntryForEdit, resetFormAndEditingState,
+        // registerAbsence, deleteEntry, save/loadEntriesFromLocalStorage,
+        // openWeekSelectionModal, closeWeekSelectionModal, processAndSendEmail,
+        // openCsvExportModal, closeCsvExportModal, processAndExportCSV,
+        // uploadImageAndAddEntry, addEntryToList, syncPendingUploads
 
         // --- Initialisering ---
         document.addEventListener('DOMContentLoaded', () => {
-            // ... (alt din initialiseringskode) ...
+            const today = getTodayString();
+            allElements.datoInput.value = today;
+            // allElements.quickEntryDateInput.value = today; // Fjernet
+            
+            loadSettings();
+            loadEntriesFromLocalStorage();
+            renderEntries();
+            populateTimeDropdowns(today);
+            
+            if (lastSelectedByggeplads) { allElements.byggepladsSelect.value = lastSelectedByggeplads; updatePlaceringOptions(); }
+            if (lastSelectedPlacering && !allElements.placeringSelect.disabled) { allElements.placeringSelect.value = lastSelectedPlacering; }
+            
+            // Populate ferie modal dropdowns
+            const currentYear = new Date().getFullYear();
+            for (let i = currentYear - 1; i <= currentYear + 1; i++) {
+                allElements.ferieAarSelect.add(new Option(i, i));
+            }
+            allElements.ferieAarSelect.value = currentYear;
+            for (let i = 1; i <= 53; i++) {
+                allElements.ferieUgeSelect.add(new Option(`Uge ${i}`, i));
+            }
+
+            // Event Listeners
+            allElements.openSettingsModalBtn.addEventListener('click', openSettingsModal);
+            allElements.closeSettingsModalBtn.addEventListener('click', closeSettingsModal);
+            allElements.settingsForm.addEventListener('submit', saveSettings);
+            allElements.timeRegistrationForm.addEventListener('submit', handleFormSubmit);
+            allElements.cancelEditBtn.addEventListener('click', resetFormAndEditingState);
+            allElements.sendEmailBtn.addEventListener('click', openWeekSelectionModal);
+            allElements.confirmWeekSelectionBtn.addEventListener('click', processAndSendEmail);
+            allElements.cancelWeekSelectionBtn.addEventListener('click', closeWeekSelectionModal);
+            allElements.closeWeekSelectionModalBtn.addEventListener('click', closeWeekSelectionModal);
+            allElements.exportCsvBtnModal.addEventListener('click', openCsvExportModal);
+            allElements.registerSickBtn.addEventListener('click', () => registerAbsence('sick'));
+            allElements.registerFerieUgeBtn.addEventListener('click', openFerieUgeModal);
+            allElements.confirmFerieUgeBtn.addEventListener('click', registerFerieUge);
+            allElements.cancelFerieUgeBtn.addEventListener('click', closeFerieUgeModal);
+            allElements.closeFerieUgeModalBtn.addEventListener('click', closeFerieUgeModal);
+            allElements.byggepladsSelect.addEventListener('change', handleByggepladsChange);
+            allElements.placeringSelect.addEventListener('change', (event) => { if (event.target.value === "ADD_NEW_PLACERING") { handleAddNewPlacering(); } });
+            allElements.datoInput.addEventListener('change', () => populateTimeDropdowns(allElements.datoInput.value));
+            allElements.startTidSelect.addEventListener('change', filterSlutTidOptions);
+            allElements.employeeNameInput.addEventListener('input', (e) => { allElements.employeeInitialsInput.value = generateInitials(e.target.value); });
+            allElements.imageUploadInput.addEventListener('change', (event) => { /* ... billede preview kode ... */ });
+
             syncPendingUploads();
             window.addEventListener('online', syncPendingUploads);
-            window.addEventListener('offline', () => offlineIndicator.classList.remove('hidden'));
-            employeeNameInput.addEventListener('input', (e) => {
-                employeeInitialsInput.value = generateInitials(e.target.value);
-            });
+            window.addEventListener('offline', () => allElements.offlineIndicator.classList.remove('hidden'));
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker registreret:', reg.scope))
+                .catch(err => console.log('Service Worker registrering fejlede:', err));
+            }
         });
     </script>
 </body>

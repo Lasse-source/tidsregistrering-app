@@ -209,7 +209,7 @@
         </div>
         <p class="text-xs text-gray-500 mt-2 text-center">Sender alle nuværende registreringer. Sørg for at medarbejdernavn er gemt.</p>
         
-        <div class="version-number">v1.2-sheets</div> 
+        <div class="version-number">v1.3-sheets</div> 
     </div>
 
     <div id="csvExportModal" class="modal">
@@ -300,6 +300,7 @@
         // --- Funktioner ---
         
         function getTodayString() { return new Date().toISOString().split('T')[0]; }
+        function getISODateString(date) { return date.toISOString().split('T')[0]; }
 
         function parseSiteLocations(text) {
             const lines = text.trim().split('\n');
@@ -343,15 +344,13 @@
             if (storedSettings) {
                 settings = JSON.parse(storedSettings);
             } else {
-                settings = { employeeName: '', siteLocationsRaw: 'Hovedkontor: Værksted, Kontor\nProjekt X: Bygning A, Bygning B', siteLocations: [] };
+                settings = { employeeName: 'Test Bruger', siteLocationsRaw: 'Hovedkontor: Værksted, Kontor\nProjekt X: Bygning A, Bygning B', siteLocations: [] };
             }
             settings.employeeName = settings.employeeName || '';
             settings.siteLocationsRaw = settings.siteLocationsRaw || 'Hovedkontor: Værksted, Kontor\nProjekt X: Bygning A, Bygning B';
             settings.siteLocations = parseSiteLocations(settings.siteLocationsRaw);
             allElements.employeeNameInput.value = settings.employeeName;
             allElements.siteLocationsSettingsTextarea.value = settings.siteLocationsRaw;
-            populateByggepladsDropdown();
-            updateGoogleSheetsButtonStatus();
         }
 
         function updateGoogleSheetsButtonStatus() {
@@ -484,7 +483,6 @@
             } else {
                 addDummyData(); // Tilføj testdata, hvis der ikke er noget gemt
             }
-            // Ensure data types are correct after loading
             weeklyEntries.forEach(entry => {
                 entry.timer = parseFloat(entry.timer) || 0;
             });
@@ -492,13 +490,12 @@
         
         // --- Initialisering ---
         document.addEventListener('DOMContentLoaded', () => {
-            loadSettings();
-            loadEntriesFromLocalStorage();
-
             const today = getTodayString();
             allElements.datoInput.value = today;
             allElements.quickEntryDateInput.value = today;
 
+            loadSettings();
+            loadEntriesFromLocalStorage();
             renderEntries();
             populateTimeDropdowns(today);
 
@@ -533,3 +530,4 @@
     </script>
 </body>
 </html>
+

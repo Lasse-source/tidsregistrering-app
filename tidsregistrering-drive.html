@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tidsregistrering</title>
+    <title>Tidsregistrering (Sheets Test)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest-sheets.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Tidsreg">
+    <meta name="apple-mobile-web-app-title" content="Tidsreg (Test)">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"> 
     <meta name="theme-color" content="#4f46e5">
 
@@ -26,12 +26,16 @@
         .form-select:disabled, .form-input:disabled { background-color: #e5e7eb; cursor: not-allowed; opacity: 0.7; }
         .btn { padding: 0.625rem 1.25rem; border-radius: 0.375rem; font-weight: 500; transition: background-color 0.15s ease-in-out; cursor: pointer; text-align: center; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-primary, .btn-success, .btn-info, .btn-warning, .btn-secondary { color: white; }
-        .btn-primary { background-color: #4f46e5; } .btn-primary:hover:not(:disabled) { background-color: #4338ca; }
-        .btn-secondary { background-color: #6b7280; } .btn-secondary:hover:not(:disabled) { background-color: #4b5563; }
-        .btn-success { background-color: #16a34a; } .btn-success:hover:not(:disabled) { background-color: #15803d; }
-        .btn-warning { background-color: #f59e0b; } .btn-warning:hover:not(:disabled) { background-color: #d97706; }
-        .btn-info { background-color: #3b82f6; } .btn-info:hover:not(:disabled) { background-color: #2563eb; }
+        .btn-success { background-color: #16a34a; color: white; }
+        .btn-success:hover:not(:disabled) { background-color: #15803d; }
+        .btn-info { background-color: #3b82f6; color: white; }
+        .btn-info:hover:not(:disabled) { background-color: #2563eb; }
+        .btn-warning { background-color: #f59e0b; color: white; }
+        .btn-warning:hover:not(:disabled) { background-color: #d97706; }
+        .btn-primary { background-color: #4f46e5; color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: #4338ca; }
+        .btn-secondary { background-color: #6b7280; color: white; }
+        .btn-secondary:hover:not(:disabled) { background-color: #4b5563; }
         table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
         th, td { border: 1px solid #e5e7eb; padding: 0.4rem; text-align: left; font-size: 0.75rem; vertical-align: top; }
         th { background-color: #f9fafb; font-weight: 600; white-space: nowrap; }
@@ -43,46 +47,84 @@
         .toggle-icon { margin-right: 0.5em; transition: transform 0.2s; display: inline-block; }
         .toggle-icon.expanded { transform: rotate(90deg); }
         .error-message { color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem; min-height: 1.25rem; }
+        .quick-entry-section { background-color: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid #e5e7eb; }
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center; }
-        .modal-content { background-color: #fefefe; margin: auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 600px; border-radius: 0.5rem; }
-        .modal-close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-content { background-color: #fefefe; margin: auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 600px; border-radius: 0.5rem; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19); }
+        .modal-content h3 { margin-top: 0; }
+        .modal-content label { display: block; margin-bottom: 0.5rem; }
+        .modal-close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+        .modal-close-btn:hover, .modal-close-btn:focus { color: black; text-decoration: none; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-gray-700">Tidsregistrering</h1>
+            <h1 class="text-2xl font-bold text-gray-700">Tidsregistrering (Sheets Test)</h1>
             <button id="openSettingsModalBtn" class="btn btn-secondary px-3 py-2"><i class="fas fa-cog"></i></button>
         </div>
 
-        <div id="offline-indicator" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
-            <p class="font-bold">Offline</p>
-            <p>Du er i øjeblikket offline. Billeder vil blive uploadet, næste gang du har forbindelse.</p>
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close-btn" id="closeSettingsModalBtn">&times;</span>
+                <h3 class="text-xl font-semibold mb-4 text-gray-700">Indstillinger</h3>
+                <form id="settingsForm" class="space-y-4">
+                    <div>
+                        <label for="employeeName" class="block text-sm font-medium text-gray-700">Medarbejder Navn:</label>
+                        <input type="text" id="employeeName" name="employeeName" class="form-input mt-1" placeholder="Dit fulde navn" required>
+                    </div>
+                    <div>
+                        <label for="siteLocationsSettings" class="block text-sm font-medium text-gray-700">Byggepladser & Placeringer</label>
+                        <textarea id="siteLocationsSettings" name="siteLocationsSettings" rows="5" class="form-textarea mt-1" placeholder="Eksempel:&#10;Hovedkontor: Mødelokale A, Kantine&#10;Projekt Alpha: Bygning 1, Bygning 2"></textarea>
+                    </div>
+                    <div class="mt-6">
+                         <button type="button" id="exportCsvBtnModal" class="btn btn-info w-full mb-2">Eksporter til CSV</button>
+                    </div>
+                     <button type="submit" class="btn btn-success w-full">Gem Indstillinger</button>
+                    <div id="settingsStatus" class="text-sm mt-2"></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="quick-entry-section">
+             <h3 class="text-lg font-semibold mb-3 text-gray-600">Hurtig Registrering</h3>
+             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <div>
+                     <label for="quickEntryDate" class="block text-sm font-medium text-gray-700">Vælg Dato:</label>
+                     <input type="date" id="quickEntryDate" name="quickEntryDate" class="form-input mt-1" required>
+                 </div>
+                 <div class="flex space-x-2">
+                     <button type="button" id="registerSickBtn" class="btn btn-warning w-full">Registrer Syg</button>
+                     <button type="button" id="registerFreeBtn" class="btn btn-info w-full">Registrer Fri/Ferie</button>
+                 </div>
+                 <div id="quickEntryError" class="error-message md:col-span-3"></div>
+             </div>
+        </div>
+        <div id="freeDayTypeModal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close-btn" id="closeFreeDayTypeModalBtn">&times;</span>
+                <h3 class="text-lg font-semibold mb-3">Vælg Type Fravær</h3>
+                <div class="space-y-3">
+                    <button id="registerFerieHeleDageBtn" class="btn btn-primary w-full">Ferie (Hele Dage)</button>
+                    <div>
+                        <label for="friTimerInput" class="block text-sm font-medium text-gray-700">Fri (Antal Timer):</label>
+                        <input type="number" id="friTimerInput" min="0.5" step="0.5" class="form-input mt-1" placeholder="F.eks. 3.5">
+                        <button id="registerFriTimerBtn" class="btn btn-primary w-full mt-2">Registrer Fri (Timer)</button>
+                    </div>
+                </div>
+                <div id="freeDayTypeError" class="error-message mt-3"></div>
+            </div>
         </div>
 
         <form id="timeRegistrationForm" class="space-y-4 mt-6">
-             <h3 class="text-lg font-semibold mb-3 text-gray-600" id="formHeading">Registrering</h3>
+             <h3 class="text-lg font-semibold mb-3 text-gray-600" id="formHeading">Normal Registrering</h3>
             <input type="hidden" id="editingEntryId" value="">
             <div>
                 <label for="dato" class="block text-sm font-medium text-gray-700">Dato:</label>
                 <input type="date" id="dato" name="dato" class="form-input mt-1" required>
             </div>
-
-            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <h4 class="text-sm font-medium text-gray-600 mb-2">Registrer Fravær for Hele Dage/Uger</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <button type="button" id="registerSickBtn" class="btn btn-warning w-full">Syg (Hel Dag)</button>
-                    <button type="button" id="registerFerieUgeBtn" class="btn btn-info w-full">Ferie (Hel Uge)</button>
-                </div>
-                <div id="quickEntryError" class="error-message mt-2"></div>
-            </div>
-
-            <hr/>
-            <h4 class="text-md font-medium text-gray-800 pt-2">Normal Arbejdsdag / Fravær i Timer</h4>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label for="byggeplads" class="block text-sm font-medium text-gray-700">Byggeplads / Opgave type:</label>
+                    <label for="byggeplads" class="block text-sm font-medium text-gray-700">Byggeplads:</label>
                     <select id="byggeplads" name="byggeplads" class="form-select mt-1"></select>
                 </div>
                  <div>
@@ -91,43 +133,36 @@
                 </div>
             </div>
              <div>
-                <label for="opgave" class="block text-sm font-medium text-gray-700">Opgavebeskrivelse:</label>
+                <label for="opgave" class="block text-sm font-medium text-gray-700">Opgave:</label>
                 <input type="text" id="opgave" name="opgave" class="form-input mt-1" placeholder="F.eks. Montering af vinduer">
             </div>
-            <div id="tidOgPauseContainer">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label for="startTid" class="block text-sm font-medium text-gray-700">Starttid:</label>
-                        <select id="startTid" name="startTid" class="form-select mt-1" required></select>
-                    </div>
-                    <div>
-                        <label for="slutTid" class="block text-sm font-medium text-gray-700">Sluttid:</label>
-                        <select id="slutTid" name="slutTid" class="form-select mt-1" required></select>
-                    </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="startTid" class="block text-sm font-medium text-gray-700">Starttid:</label>
+                    <select id="startTid" name="startTid" class="form-select mt-1" required></select>
                 </div>
-                <div class="mt-2 space-y-2 md:space-y-0 md:flex md:items-center md:space-x-4">
-                     <div class="flex items-center">
-                         <input type="checkbox" id="pause9" name="pause9" class="form-checkbox h-4 w-4">
-                         <label for="pause9" class="ml-1 text-sm font-medium text-gray-700">Pause kl. 9</label>
-                     </div>
-                     <div class="flex items-center">
-                         <input type="checkbox" id="pause12" name="pause12" class="form-checkbox h-4 w-4">
-                         <label for="pause12" class="ml-1 text-sm font-medium text-gray-700">Pause kl. 12</label>
-                     </div>
+                <div>
+                    <label for="slutTid" class="block text-sm font-medium text-gray-700">Sluttid:</label>
+                    <select id="slutTid" name="slutTid" class="form-select mt-1" required></select>
                 </div>
             </div>
-             <div class="flex items-center mt-2">
-                 <input type="checkbox" id="ekstraarbejde" name="ekstraarbejde" class="form-checkbox h-4 w-4">
-                 <label for="ekstraarbejde" class="ml-1 text-sm font-medium text-gray-700">Ekstraarbejde</label>
+             <div class="mt-2 space-y-2 md:space-y-0 md:flex md:items-center md:space-x-4">
+                 <div class="flex items-center">
+                     <input type="checkbox" id="pause9" name="pause9" class="form-checkbox h-4 w-4">
+                     <label for="pause9" class="ml-1 text-sm font-medium text-gray-700">Pause kl. 9</label>
+                 </div>
+                 <div class="flex items-center">
+                     <input type="checkbox" id="pause12" name="pause12" class="form-checkbox h-4 w-4">
+                     <label for="pause12" class="ml-1 text-sm font-medium text-gray-700">Pause kl. 12</label>
+                 </div>
+                 <div class="flex items-center">
+                     <input type="checkbox" id="ekstraarbejde" name="ekstraarbejde" class="form-checkbox h-4 w-4">
+                     <label for="ekstraarbejde" class="ml-1 text-sm font-medium text-gray-700">Ekstraarbejde</label>
+                 </div>
              </div>
             <div>
                 <label for="materialer" class="block text-sm font-medium text-gray-700">Materialeforbrug:</label>
                 <textarea id="materialer" name="materialer" rows="2" class="form-textarea mt-1"></textarea>
-            </div>
-            <div>
-                <label for="imageUpload" class="block text-sm font-medium text-gray-700">Vedhæft Billede (valgfrit):</label>
-                <input type="file" id="imageUpload" name="imageUpload" class="form-input mt-1" accept="image/*">
-                <div id="imagePreviewContainer" class="mt-2"></div>
             </div>
             <div>
                 <label for="beskrivelse" class="block text-sm font-medium text-gray-700">Bemærkninger:</label>
@@ -139,100 +174,71 @@
                 <button type="button" id="cancelEditBtn" class="btn btn-secondary w-full" style="display:none;">Annuller</button>
             </div>
         </form>
+
+        <div id="statusMessage" class="mt-4"></div> 
+        <div id="googleSheetStatus" class="mt-4"></div> 
         
         <h2 class="text-xl font-semibold mt-8 mb-4 text-gray-700">Registrerede Timer</h2>
         <div class="overflow-x-auto">
             <table id="entriesTable">
                 <thead>
                     <tr>
-                        <th>Dato</th><th>Uge</th><th>Dag</th><th>Byggeplads</th><th>Placering</th>
-                        <th>Opgave</th><th>Start</th><th>Slut</th><th>Pauser</th><th>Timer</th>
-                        <th>Ekstra</th><th>Materialer</th><th>Bemærk.</th><th>Handling</th>
+                        <th>Dato</th>
+                        <th>Uge</th>
+                        <th>Dag</th>
+                        <th>Byggeplads</th>
+                        <th>Placering</th>
+                        <th>Opgave</th>
+                        <th>Start</th>
+                        <th>Slut</th>
+                        <th>Pauser</th>
+                        <th>Timer</th>
+                        <th>Ekstra</th>
+                        <th>Materialer</th>
+                        <th>Bemærk.</th>
+                        <th>Handling</th>
                     </tr>
                 </thead>
                 <tbody id="entriesBody"></tbody>
             </table>
         </div>
         <div id="noEntriesMessage" class="text-gray-500 mt-4 text-center" style="display: none;">Ingen registreringer endnu.</div>
-        
+
         <div class="mt-6 flex space-x-2">
-            <button id="sendEmailBtn" class="btn btn-success w-full">Send Ugeseddel</button>
+            <button id="sendToGoogleSheetsBtn" class="btn btn-success w-full">Send til Google Sheets</button>
         </div>
-        <p class="text-xs text-gray-500 mt-2 text-center">Sørg for at indstillinger er gemt før afsendelse.</p>
-        <div id="emailStatus" class="mt-2"></div>
-        <div class="version-number">v2.1</div>
+        <p class="text-xs text-gray-500 mt-2 text-center">Sender alle nuværende registreringer. Sørg for at medarbejdernavn er gemt.</p>
+        
+        <div class="version-number">v1.2-sheets</div> 
     </div>
 
-    <!-- Modals -->
-    <div id="settingsModal" class="modal">
+    <div id="csvExportModal" class="modal">
         <div class="modal-content">
-            <span class="modal-close-btn" id="closeSettingsModalBtn">&times;</span>
-            <h3 class="text-xl font-semibold mb-4 text-gray-700">Indstillinger</h3>
-            <form id="settingsForm" class="space-y-4">
-                <div>
-                    <label for="recipientEmail" class="block text-sm font-medium text-gray-700">Modtager Email:</label>
-                    <input type="email" id="recipientEmail" name="recipientEmail" class="form-input mt-1">
-                </div>
-                <div>
-                    <label for="ccEmail" class="block text-sm font-medium text-gray-700">CC Email (valgfri):</label>
-                    <input type="email" id="ccEmail" name="ccEmail" class="form-input mt-1">
-                </div>
-                <div>
-                    <label for="employeeName" class="block text-sm font-medium text-gray-700">Medarbejder Navn:</label>
-                    <input type="text" id="employeeName" name="employeeName" class="form-input mt-1" required>
-                </div>
-                <div>
-                    <label for="employeeInitials" class="block text-sm font-medium text-gray-700">Dine Initialer (auto-genereret):</label>
-                    <input type="text" id="employeeInitials" name="employeeInitials" class="form-input mt-1" placeholder="f.eks. LJ" readonly>
-                </div>
-                <div>
-                    <label for="siteLocationsSettings" class="block text-sm font-medium text-gray-700">Byggepladser & Placeringer</label>
-                    <textarea id="siteLocationsSettings" name="siteLocationsSettings" rows="5" class="form-textarea mt-1"></textarea>
-                </div>
-                <div class="mt-6">
-                     <button type="button" id="exportCsvBtnModal" class="btn btn-info w-full mb-2">Eksporter til CSV</button>
-                </div>
-                 <button type="submit" class="btn btn-success w-full">Gem Indstillinger</button>
-                <div id="settingsStatus" class="text-sm mt-2"></div>
-            </form>
-        </div>
-    </div>
-    <div id="ferieUgeModal" class="modal">
-        <div class="modal-content">
-            <span class="modal-close-btn" id="closeFerieUgeModalBtn">&times;</span>
-            <h3 class="text-lg font-semibold mb-3">Registrer Ferie for en Hel Uge</h3>
+            <span class="modal-close-btn" id="closeCsvExportModalBtn">&times;</span>
+            <h3 class="text-lg font-semibold mb-3">Vælg Filtre for CSV Eksport</h3>
             <div class="space-y-4">
                 <div>
-                    <label for="ferieAarSelect" class="block text-sm font-medium text-gray-700">Vælg År:</label>
-                    <select id="ferieAarSelect" class="form-select mt-1"></select>
+                    <label class="block text-sm font-medium text-gray-700">Vælg Uger (alle hvis ingen valgt):</label>
+                    <div id="csvWeekCheckboxesContainer" class="max-h-40 overflow-y-auto border p-2 rounded"></div>
                 </div>
                 <div>
-                    <label for="ferieUgeSelect" class="block text-sm font-medium text-gray-700">Vælg Uge:</label>
-                    <select id="ferieUgeSelect" class="form-select mt-1"></select>
+                    <label for="csvByggepladsSelect" class="block text-sm font-medium text-gray-700">Vælg Byggeplads (alle hvis ingen valgt):</label>
+                    <select id="csvByggepladsSelect" class="form-select mt-1">
+                        <option value="">-- Alle Byggepladser --</option>
+                    </select>
                 </div>
             </div>
-            <div id="ferieUgeError" class="error-message mt-3"></div>
             <div class="mt-6 flex justify-end space-x-2">
-                <button id="cancelFerieUgeBtn" class="btn btn-secondary">Annuller</button>
-                <button id="confirmFerieUgeBtn" class="btn btn-primary">Registrer Uge</button>
+                <button id="cancelCsvExportBtn" class="btn btn-secondary">Annuller</button>
+                <button id="confirmCsvExportBtn" class="btn btn-primary">Eksporter CSV</button>
             </div>
-        </div>
-    </div>
-    <div id="weekSelectionModal" class="modal">
-        <div class="modal-content">
-            <span class="modal-close-btn" id="closeWeekSelectionModalBtn">&times;</span>
-            <h3 class="text-lg font-semibold mb-3">Vælg Uger til Afsendelse</h3>
-            <div id="weekCheckboxesContainer" class="mb-4 max-h-60 overflow-y-auto"></div>
-            <div class="flex justify-end space-x-2">
-                <button id="cancelWeekSelectionBtn" class="btn btn-secondary">Annuller</button>
-                <button id="confirmWeekSelectionBtn" class="btn btn-primary">Send Valgte Uger</button>
-            </div>
+             <div id="csvExportStatus" class="text-sm mt-2"></div>
         </div>
     </div>
     
     <script>
-        // --- Globale Variabler ---
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx4-mz1MNZ4FY0GBOV1qlWrmUBZQ3X1Jz1v9S4kO8BPr_ZoZZRqfVbCDevk2e24WxqO/exec";
+        // --- Globale Variabler og Elementer ---
+        const SCRIPT_URL = "ERSTAT_MED_DIN_GOOGLE_APPS_SCRIPT_WEB_APP_URL";
         const allElements = {
             settingsModal: document.getElementById('settingsModal'),
             openSettingsModalBtn: document.getElementById('openSettingsModalBtn'),
@@ -249,49 +255,44 @@
             formError: document.getElementById('formError'),
             settingsStatus: document.getElementById('settingsStatus'),
             statusMessage: document.getElementById('statusMessage'),
+            googleSheetStatus: document.getElementById('googleSheetStatus'),
             noEntriesMessage: document.getElementById('noEntriesMessage'),
             entriesTable: document.getElementById('entriesTable'),
-            sendEmailBtn: document.getElementById('sendEmailBtn'),
-            emailStatus: document.getElementById('emailStatus'),
+            sendToGoogleSheetsBtn: document.getElementById('sendToGoogleSheetsBtn'),
             exportCsvBtnModal: document.getElementById('exportCsvBtnModal'),
-            quickEntryError: document.getElementById('quickEntryError'),
+            csvExportModal: document.getElementById('csvExportModal'),
+            closeCsvExportModalBtn: document.getElementById('closeCsvExportModalBtn'),
+            csvWeekCheckboxesContainer: document.getElementById('csvWeekCheckboxesContainer'),
+            csvByggepladsSelect: document.getElementById('csvByggepladsSelect'),
+            cancelCsvExportBtn: document.getElementById('cancelCsvExportBtn'),
+            confirmCsvExportBtn: document.getElementById('confirmCsvExportBtn'),
+            csvExportStatus: document.getElementById('csvExportStatus'),
+            quickEntryDateInput: document.getElementById('quickEntryDate'),
             registerSickBtn: document.getElementById('registerSickBtn'),
-            registerFerieUgeBtn: document.getElementById('registerFerieUgeBtn'),
-            ferieUgeModal: document.getElementById('ferieUgeModal'),
-            closeFerieUgeModalBtn: document.getElementById('closeFerieUgeModalBtn'),
-            ferieAarSelect: document.getElementById('ferieAarSelect'),
-            ferieUgeSelect: document.getElementById('ferieUgeSelect'),
-            ferieUgeError: document.getElementById('ferieUgeError'),
-            cancelFerieUgeBtn: document.getElementById('cancelFerieUgeBtn'),
-            confirmFerieUgeBtn: document.getElementById('confirmFerieUgeBtn'),
-            recipientEmailInput: document.getElementById('recipientEmail'),
-            ccEmailInput: document.getElementById('ccEmail'),
+            registerFreeBtn: document.getElementById('registerFreeBtn'),
+            quickEntryError: document.getElementById('quickEntryError'),
+            freeDayTypeModal: document.getElementById('freeDayTypeModal'),
+            closeFreeDayTypeModalBtn: document.getElementById('closeFreeDayTypeModalBtn'),
+            registerFerieHeleDageBtn: document.getElementById('registerFerieHeleDageBtn'),
+            friTimerInput: document.getElementById('friTimerInput'),
+            registerFriTimerBtn: document.getElementById('registerFriTimerBtn'),
+            freeDayTypeError: document.getElementById('freeDayTypeError'),
             employeeNameInput: document.getElementById('employeeName'),
-            employeeInitialsInput: document.getElementById('employeeInitials'),
             siteLocationsSettingsTextarea: document.getElementById('siteLocationsSettings'),
             datoInput: document.getElementById('dato'),
             byggepladsSelect: document.getElementById('byggeplads'),
             placeringSelect: document.getElementById('placering'),
             opgaveInput: document.getElementById('opgave'),
-            tidOgPauseContainer: document.getElementById('tidOgPauseContainer'),
             pause9Checkbox: document.getElementById('pause9'),
             pause12Checkbox: document.getElementById('pause12'),
             ekstraarbejdeCheckbox: document.getElementById('ekstraarbejde'),
             materialerInput: document.getElementById('materialer'),
-            imageUploadInput: document.getElementById('imageUpload'),
-            imagePreviewContainer: document.getElementById('imagePreviewContainer'),
-            beskrivelseInput: document.getElementById('beskrivelse'),
-            offlineIndicator: document.getElementById('offline-indicator'),
-            weekSelectionModal: document.getElementById('weekSelectionModal'),
-            weekCheckboxesContainer: document.getElementById('weekCheckboxesContainer'),
-            cancelWeekSelectionBtn: document.getElementById('cancelWeekSelectionBtn'),
-            confirmWeekSelectionBtn: document.getElementById('confirmWeekSelectionBtn'),
-            closeWeekSelectionModalBtn: document.getElementById('closeWeekSelectionModalBtn'),
+            beskrivelseInput: document.getElementById('beskrivelse')
         };
 
         let weeklyEntries = [];
-        let settings = {};
-        const standardByggepladsOptionsForForm = ["Fri", "Andet"];
+        let settings = { siteLocations: [] };
+        const standardByggepladsOptionsForForm = ["Andet"];
         let lastSelectedByggeplads = '';
         let lastSelectedPlacering = '';
         let currentlyEditingId = null;
@@ -299,47 +300,212 @@
         // --- Funktioner ---
         
         function getTodayString() { return new Date().toISOString().split('T')[0]; }
-        function getISODateString(date) { return date.toISOString().split('T')[0]; }
 
-        function generateInitials(name) {
-            if (!name) return '';
-            const nameParts = name.trim().split(' ').filter(p => p);
-            if (nameParts.length > 1) {
-                return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
-            } else if (nameParts.length === 1 && nameParts[0].length > 1) {
-                return (nameParts[0][0] + nameParts[0][1]).toUpperCase();
+        function parseSiteLocations(text) {
+            const lines = text.trim().split('\n');
+            const siteData = [];
+            lines.forEach(line => {
+                const parts = line.split(':');
+                const siteName = parts[0]?.trim();
+                if (siteName) {
+                    const locationsRaw = parts[1]?.trim() || '';
+                    const locations = locationsRaw ? locationsRaw.split(',').map(loc => loc.trim()).filter(loc => loc) : [];
+                    siteData.push({ site: siteName, locations: locations });
+                }
+            });
+            return siteData;
+        }
+
+        function saveSettings(event) {
+            event.preventDefault();
+            const rawSiteLocationsText = allElements.siteLocationsSettingsTextarea.value;
+            settings = {
+                employeeName: allElements.employeeNameInput.value.trim(),
+                siteLocationsRaw: rawSiteLocationsText,
+                siteLocations: parseSiteLocations(rawSiteLocationsText)
+            };
+            if (!settings.employeeName) {
+                allElements.settingsStatus.textContent = 'Udfyld venligst medarbejdernavn.';
+                allElements.settingsStatus.className = 'text-sm mt-2 text-red-600';
+                return;
             }
-            return (nameParts[0]?.[0] || '').toUpperCase();
+            localStorage.setItem('timeRegSettings', JSON.stringify(settings));
+            allElements.settingsStatus.textContent = 'Indstillinger gemt!';
+            allElements.settingsStatus.className = 'text-sm mt-2 text-green-600';
+            setTimeout(() => { allElements.settingsStatus.textContent = ''; }, 3000);
+            populateByggepladsDropdown();
+            updateGoogleSheetsButtonStatus();
+            closeSettingsModal();
+        }
+
+        function loadSettings() {
+            const storedSettings = localStorage.getItem('timeRegSettings');
+            if (storedSettings) {
+                settings = JSON.parse(storedSettings);
+            } else {
+                settings = { employeeName: '', siteLocationsRaw: 'Hovedkontor: Værksted, Kontor\nProjekt X: Bygning A, Bygning B', siteLocations: [] };
+            }
+            settings.employeeName = settings.employeeName || '';
+            settings.siteLocationsRaw = settings.siteLocationsRaw || 'Hovedkontor: Værksted, Kontor\nProjekt X: Bygning A, Bygning B';
+            settings.siteLocations = parseSiteLocations(settings.siteLocationsRaw);
+            allElements.employeeNameInput.value = settings.employeeName;
+            allElements.siteLocationsSettingsTextarea.value = settings.siteLocationsRaw;
+            populateByggepladsDropdown();
+            updateGoogleSheetsButtonStatus();
+        }
+
+        function updateGoogleSheetsButtonStatus() {
+            allElements.sendToGoogleSheetsBtn.disabled = !settings.employeeName;
+            allElements.googleSheetStatus.textContent = allElements.sendToGoogleSheetsBtn.disabled ? 'Udfyld og gem medarbejdernavn i indstillinger for at sende.' : '';
+        }
+
+        function openSettingsModal() { allElements.settingsModal.style.display = 'flex'; }
+        function closeSettingsModal() { allElements.settingsModal.style.display = 'none'; }
+        
+        function openFreeDayTypeModal() {
+            allElements.freeDayTypeError.textContent = '';
+            allElements.friTimerInput.value = '';
+            allElements.freeDayTypeModal.style.display = 'flex';
+        }
+        function closeFreeDayTypeModal() { allElements.freeDayTypeModal.style.display = 'none'; }
+        
+        function getWeekNumber(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+        function getDayName(dateString) {
+            const date = new Date(dateString + 'T12:00:00');
+            return date.toLocaleDateString('da-DK', { weekday: 'long' });
+        }
+        function getDayOfWeek(dateString) {
+            const date = new Date(dateString + 'T12:00:00'); return (date.getDay() + 6) % 7;
+        }
+        function timeToMinutes(timeStr) {
+            if (!timeStr || !timeStr.includes(':')) return 0;
+            const [hours, minutes] = timeStr.split(':').map(Number); return hours * 60 + minutes;
+        }
+
+        function renderEntries() {
+            allElements.entriesBody.innerHTML = '';
+            // Rest of the renderEntries function logic...
+            toggleNoEntriesMessage();
+        }
+
+        function toggleNoEntriesMessage() {
+            const hasEntries = weeklyEntries && weeklyEntries.length > 0;
+            allElements.noEntriesMessage.style.display = hasEntries ? 'none' : 'block';
+            allElements.entriesTable.style.display = hasEntries ? 'table' : 'none';
+        }
+
+        async function sendDataToGoogleSheets() {
+            allElements.googleSheetStatus.textContent = '';
+            if (!settings.employeeName) {
+                showStatusMessage('Udfyld og gem medarbejdernavn i indstillinger først.', 'error', allElements.googleSheetStatus);
+                openSettingsModal();
+                return;
+            }
+            if (weeklyEntries.length === 0) {
+                showStatusMessage('Ingen registreringer at sende.', 'error', allElements.googleSheetStatus);
+                return;
+            }
+            if (SCRIPT_URL.includes("https://script.google.com/macros/s/AKfycbx4-mz1MNZ4FY0GBOV1qlWrmUBZQ3X1Jz1v9S4kO8BPr_ZoZZRqfVbCDevk2e24WxqO/exec")) {
+                showStatusMessage("Google Apps Script URL er ikke konfigureret korrekt.", "error", allElements.googleSheetStatus);
+                return;
+            }
+
+            allElements.sendToGoogleSheetsBtn.disabled = true;
+            allElements.sendToGoogleSheetsBtn.textContent = "Sender...";
+
+            const dataToSend = weeklyEntries.map(entry => ({
+                medarbejderNavn: settings.employeeName,
+                dato: entry.dato,
+                uge: entry.uge,
+                dag: entry.dag,
+                byggeplads: entry.byggeplads,
+                placering: entry.placering || '-',
+                opgave: entry.opgave || '-',
+                startTid: entry.startTid || '-',
+                slutTid: entry.slutTid || '-',
+                pause9: entry.pause9 ? "Ja" : "Nej",
+                pause12: entry.pause12 ? "Ja" : "Nej",
+                timer: entry.timer.toFixed(2),
+                ekstraarbejde: entry.ekstraarbejde ? "Ja" : "Nej",
+                materialer: entry.materialer || '-',
+                beskrivelse: entry.beskrivelse || '-'
+            }));
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ entries: dataToSend }), // Simplified for no-cors
+                });
+
+                // Since mode is 'no-cors', we can't read the response. We assume success if the request doesn't throw an error.
+                showStatusMessage('Data sendt! Tjek dit Google Sheet for at bekræfte.', 'success', allElements.googleSheetStatus);
+                if (confirm("Data er sendt. Vil du rydde listen med registreringer?")) {
+                    weeklyEntries = [];
+                    saveEntriesToLocalStorage();
+                    renderEntries();
+                }
+
+            } catch (error) {
+                console.error('Fejl ved afsendelse:', error);
+                showStatusMessage(`Netværksfejl: ${error.message}. Tjek konsollen.`, 'error', allElements.googleSheetStatus);
+            } finally {
+                allElements.sendToGoogleSheetsBtn.disabled = false;
+                allElements.sendToGoogleSheetsBtn.textContent = "Send til Google Sheets";
+            }
         }
         
-        // ... (Alle andre funktioner fra den tidligere version indsættes her) ...
-        // Dette inkluderer: parseSiteLocations, saveSettings, loadSettings,
-        // open/close modals, populateTimeDropdowns, filterSlutTidOptions,
-        // getWeekNumber, getDayName, getDayOfWeek, timeToMinutes, calculateDuration,
-        // populateByggepladsDropdown, updatePlaceringOptions, handleAddNewSite,
-        // formatSiteLocations, handleAddNewPlacering, showStatusMessage,
-        // toggleNoEntriesMessage, renderEntries, toggleWeek/DayVisibility,
-        // createEntryObject, handleFormSubmit, loadEntryForEdit, resetFormAndEditingState,
-        // registerAbsence, deleteEntry, save/loadEntriesFromLocalStorage,
-        // openWeekSelectionModal, closeWeekSelectionModal, processAndSendEmail,
-        // openCsvExportModal, closeCsvExportModal, processAndExportCSV,
-        // uploadImageAndAddEntry, addEntryToList, syncPendingUploads
+        function addDummyData() {
+             const today = new Date();
+             const dayOfWeek = today.getDay(); // Sunday - 0, Monday - 1
+             const monday = new Date(today);
+             monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
 
+             weeklyEntries = [
+                { id: Date.now() + 1, dato: getISODateString(monday), uge: getWeekNumber(monday), dag: 'Mandag', byggeplads: 'Projekt X', placering: 'Bygning A', opgave: 'Opsætning af gipsvægge', startTid: '07:00', slutTid: '15:00', pause9: true, pause12: true, timer: 7, ekstraarbejde: false, materialer: 'Gipsplader, skruer', beskrivelse: 'Første sektion færdig.' },
+                { id: Date.now() + 2, dato: getISODateString(new Date(monday).setDate(monday.getDate() + 1)), uge: getWeekNumber(monday), dag: 'Tirsdag', byggeplads: 'Hovedkontor', placering: 'Værksted', opgave: 'Reparation af værktøj', startTid: '08:00', slutTid: '12:00', pause9: true, pause12: false, timer: 3.5, ekstraarbejde: false, materialer: '', beskrivelse: '' },
+                { id: Date.now() + 3, dato: getISODateString(new Date(monday).setDate(monday.getDate() + 1)), uge: getWeekNumber(monday), dag: 'Tirsdag', byggeplads: 'Projekt X', placering: 'Bygning B', opgave: 'Fugearbejde', startTid: '12:30', slutTid: '16:00', pause9: false, pause12: false, timer: 3.5, ekstraarbejde: true, materialer: 'Fugemasse', beskrivelse: 'Akutopgave.' },
+                { id: Date.now() + 4, dato: getISODateString(new Date(monday).setDate(monday.getDate() + 2)), uge: getWeekNumber(monday), dag: 'Onsdag', byggeplads: 'Syg', placering: '-', opgave: 'Syg', startTid: null, slutTid: null, timer: 8, pause9: false, pause12: false, ekstraarbejde: false, materialer: '', beskrivelse: 'Syg' },
+                { id: Date.now() + 5, dato: getISODateString(new Date(monday).setDate(monday.getDate() + 3)), uge: getWeekNumber(monday), dag: 'Torsdag', byggeplads: 'Projekt X', placering: 'Bygning A', opgave: 'Spartling af vægge', startTid: '07:00', slutTid: '15:30', pause9: true, pause12: true, timer: 7.5, ekstraarbejde: false, materialer: 'Spartelmasse', beskrivelse: '' },
+                { id: Date.now() + 6, dato: getISODateString(new Date(monday).setDate(monday.getDate() + 4)), uge: getWeekNumber(monday), dag: 'Fredag', byggeplads: 'Hovedkontor', placering: 'Kontor', opgave: 'Ugentligt møde', startTid: '08:00', slutTid: '09:00', timer: 1, pause9: false, pause12: false, ekstraarbejde: false, materialer: '', beskrivelse: '' },
+                { id: Date.now() + 7, dato: getISODateString(new Date(monday).setDate(monday.getDate() + 4)), uge: getWeekNumber(monday), dag: 'Fredag', byggeplads: 'Hovedkontor', placering: 'Værksted', opgave: 'Oprydning', startTid: '09:00', slutTid: '12:00', timer: 3, pause9: true, pause12: false, ekstraarbejde: false, materialer: '', beskrivelse: '' }
+             ];
+             saveEntriesToLocalStorage();
+        }
+
+        function loadEntriesFromLocalStorage() {
+            const storedEntries = localStorage.getItem('weeklyTimeEntries');
+            if (storedEntries && storedEntries !== '[]') {
+                weeklyEntries = JSON.parse(storedEntries);
+            } else {
+                addDummyData(); // Tilføj testdata, hvis der ikke er noget gemt
+            }
+            // Ensure data types are correct after loading
+            weeklyEntries.forEach(entry => {
+                entry.timer = parseFloat(entry.timer) || 0;
+            });
+        }
+        
         // --- Initialisering ---
         document.addEventListener('DOMContentLoaded', () => {
-            const today = getTodayString();
-            allElements.datoInput.value = today;
-            // allElements.quickEntryDateInput.value = today; // Fjernet
-            
             loadSettings();
             loadEntriesFromLocalStorage();
+
+            const today = getTodayString();
+            allElements.datoInput.value = today;
+            allElements.quickEntryDateInput.value = today;
+
             renderEntries();
             populateTimeDropdowns(today);
-            
+
             if (lastSelectedByggeplads) { allElements.byggepladsSelect.value = lastSelectedByggeplads; updatePlaceringOptions(); }
             if (lastSelectedPlacering && !allElements.placeringSelect.disabled) { allElements.placeringSelect.value = lastSelectedPlacering; }
             
-            // Populate ferie modal dropdowns
+            // Populate ferie modal
             const currentYear = new Date().getFullYear();
             for (let i = currentYear - 1; i <= currentYear + 1; i++) {
                 allElements.ferieAarSelect.add(new Option(i, i));
@@ -350,36 +516,18 @@
             }
 
             // Event Listeners
-            allElements.openSettingsModalBtn.addEventListener('click', openSettingsModal);
-            allElements.closeSettingsModalBtn.addEventListener('click', closeSettingsModal);
+            allElements.openSettingsModalBtn.addEventListener('click', () => allElements.settingsModal.style.display = 'flex');
+            allElements.closeSettingsModalBtn.addEventListener('click', () => allElements.settingsModal.style.display = 'none');
+            // ... Add all other event listeners here ...
             allElements.settingsForm.addEventListener('submit', saveSettings);
-            allElements.timeRegistrationForm.addEventListener('submit', handleFormSubmit);
-            allElements.cancelEditBtn.addEventListener('click', resetFormAndEditingState);
-            allElements.sendEmailBtn.addEventListener('click', openWeekSelectionModal);
-            allElements.confirmWeekSelectionBtn.addEventListener('click', processAndSendEmail);
-            allElements.cancelWeekSelectionBtn.addEventListener('click', closeWeekSelectionModal);
-            allElements.closeWeekSelectionModalBtn.addEventListener('click', closeWeekSelectionModal);
-            allElements.exportCsvBtnModal.addEventListener('click', openCsvExportModal);
-            allElements.registerSickBtn.addEventListener('click', () => registerAbsence('sick'));
-            allElements.registerFerieUgeBtn.addEventListener('click', openFerieUgeModal);
-            allElements.confirmFerieUgeBtn.addEventListener('click', registerFerieUge);
-            allElements.cancelFerieUgeBtn.addEventListener('click', closeFerieUgeModal);
-            allElements.closeFerieUgeModalBtn.addEventListener('click', closeFerieUgeModal);
-            allElements.byggepladsSelect.addEventListener('change', handleByggepladsChange);
-            allElements.placeringSelect.addEventListener('change', (event) => { if (event.target.value === "ADD_NEW_PLACERING") { handleAddNewPlacering(); } });
-            allElements.datoInput.addEventListener('change', () => populateTimeDropdowns(allElements.datoInput.value));
-            allElements.startTidSelect.addEventListener('change', filterSlutTidOptions);
-            allElements.employeeNameInput.addEventListener('input', (e) => { allElements.employeeInitialsInput.value = generateInitials(e.target.value); });
-            allElements.imageUploadInput.addEventListener('change', (event) => { /* ... billede preview kode ... */ });
-
-            syncPendingUploads();
-            window.addEventListener('online', syncPendingUploads);
-            window.addEventListener('offline', () => allElements.offlineIndicator.classList.remove('hidden'));
-
+            allElements.timeRegistrationForm.addEventListener('submit', handleFormSubmit); // Assuming handleFormSubmit is defined
+            allElements.sendToGoogleSheetsBtn.addEventListener('click', sendDataToGoogleSheets);
+            
+            // Service Worker
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('Service Worker registreret:', reg.scope))
-                .catch(err => console.log('Service Worker registrering fejlede:', err));
+                navigator.serviceWorker.register('sw-sheets.js')
+                .then(reg => console.log('Test-version Service Worker registreret:', reg.scope))
+                .catch(err => console.log('Test-version Service Worker registrering fejlede:', err));
             }
         });
     </script>

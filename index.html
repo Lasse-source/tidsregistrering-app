@@ -111,10 +111,20 @@
                         </label>
                         <textarea id="siteLocationsSettings" rows="5" class="form-textarea mt-1" placeholder="Eksempel:&#10;Hovedkontor: Mødelokale A, Kantine"></textarea>
                     </div>
-                    <div class="mt-6">
-                         <button type="button" id="exportCsvBtnModal" class="btn btn-info w-full mb-2">Eksporter til CSV</button>
+                    
+                    <div class="mt-6 p-3 bg-gray-50 border rounded-md space-y-2">
+                        <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Data & Backup</h4>
+                        <button type="button" id="exportCsvBtnModal" class="btn btn-info w-full text-sm">Eksporter til CSV</button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="exportBackupBtn" class="btn btn-secondary w-full text-xs py-2">Download Backup</button>
+                            <label class="btn btn-primary w-full text-xs py-2 block text-center cursor-pointer">
+                                Gendan Backup
+                                <input type="file" id="importBackupInput" style="display:none;" accept=".json">
+                            </label>
+                        </div>
                     </div>
-                     <button type="submit" class="btn btn-success w-full">Gem Indstillinger</button>
+
+                     <button type="submit" class="btn btn-success w-full mt-4">Gem Indstillinger</button>
                     <div id="settingsStatus" class="text-sm mt-2"></div>
                 </form>
             </div>
@@ -251,7 +261,7 @@
         <p class="text-xs text-gray-500 mt-2 text-center">Sørg for at indstillinger er gemt før afsendelse.</p>
         <div id="emailStatus" class="mt-2"></div>
 
-        <div class="version-number">v1.3</div>
+        <div class="version-number">v1.4</div>
     </div>
 
     <div id="weekSelectionModal" class="modal">
@@ -362,6 +372,9 @@
         const cancelWeekSelectionBtn = document.getElementById('cancelWeekSelectionBtn');
         const confirmWeekSelectionBtn = document.getElementById('confirmWeekSelectionBtn');
         const closeWeekSelectionModalBtn = document.getElementById('closeWeekSelectionModalBtn');
+
+        const exportBackupBtn = document.getElementById('exportBackupBtn');
+        const importBackupInput = document.getElementById('importBackupInput');
 
         let weeklyEntries = [];
         let settings = { siteLocations: [], ccEmail: '', interval: 15, pauseLength: 30 }; 
@@ -716,7 +729,7 @@
                     const entriesByDay = weekEntries.reduce((acc, entry) => {
                         (acc[entry.dato] = acc[entry.dato] || []).push(entry); return acc;
                     }, {});
-                    const sortedDays = Object.keys(entriesByDay).sort();
+                    const sortedDays = Object.keys(entriesByDay).sort().reverse(); // Sorter nyeste dage først i visningen
 
                     sortedDays.forEach(dateKey => {
                         const dayEntries = entriesByDay[dateKey];
@@ -972,18 +985,12 @@
 
         function openWeekSelectionModal() {
             if (weeklyEntries.length === 0) return;
-            
-            // Find unikke år ud fra dataene
             const uniqueYears = [...new Set(weeklyEntries.map(entry => getYearString(entry.dato)))].sort().reverse();
-            
             selectSendYear.innerHTML = '';
             uniqueYears.forEach(year => {
                 selectSendYear.add(new Option(year, year));
             });
-            
-            // Fyld ugerne for det valgte år automatisk
             populateSendWeeks();
-            
             weekSelectionModal.style.display = 'flex';
         }
 
@@ -992,7 +999,6 @@
             weekCheckboxesContainer.innerHTML = '';
             if (!selectedYear) return;
             
-            // Filtrer registreringer på valgt år og find unikke uger
             const weeksInYear = [...new Set(
                 weeklyEntries
                     .filter(entry => getYearString(entry.dato) === selectedYear)
@@ -1108,6 +1114,49 @@
             link.click();
         }
 
+        // BACKUP LOGIK
+        function exportBackup() {
+            const backupData = {
+                entries: weeklyEntries,
+                settings: settings
+            };
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' }));
+            link.download = `tidsreg_backup_${getTodayString()}.json`;
+            link.click();
+        }
+
+        function importBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.entries && Array.isArray(data.entries)) {
+                        if (confirm('Vil du overskrive nuværende data med denne backup?')) {
+                            weeklyEntries = data.entries;
+                            if (data.settings) {
+                                settings = data.settings;
+                                localStorage.setItem('timeRegSettings', JSON.stringify(settings));
+                                loadSettings();
+                            }
+                            saveEntriesToLocalStorage();
+                            renderEntries();
+                            populateTimeDropdowns(datoInput.value);
+                            alert('Backup blev indlæst succesfuldt!');
+                            closeSettingsModal();
+                        }
+                    } else {
+                        alert('Fejl: Filen har ikke det rigtige format.');
+                    }
+                } catch (err) {
+                    alert('Der skete en fejl under indlæsning: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
         settingsForm.addEventListener('submit', saveSettings);
         timeRegistrationForm.addEventListener('submit', handleFormSubmit);
         cancelEditBtn.addEventListener('click', resetFormAndEditingState);
@@ -1123,6 +1172,8 @@
         registerSickBtn.addEventListener('click', () => registerAbsence('sick'));
         registerFerieHeleDageBtn.addEventListener('click', () => registerAbsence('ferie-hele-dage'));
         registerFriTimerBtn.addEventListener('click', () => registerAbsence('fri-timer', friTimerInput.value));
+        exportBackupBtn.addEventListener('click', exportBackup);
+        importBackupInput.addEventListener('change', importBackup);
 
         byggepladsSelect.addEventListener('change', (e) => {
             if (e.target.value === "ADD_NEW_SITE") handleAddNewSite();

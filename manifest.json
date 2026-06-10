@@ -1,24 +1,22 @@
+
 {
-  "name": "Tidsregistrering Snedkergården",
-  "short_name": "Tidsreg",
-  "description": "Enkel tidsregistrering for Snedkergården.",
-  "start_url": "index.html",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#4f46e5",
-  "orientation": "portrait-primary",
+  "short_name": "Tid",
+  "name": "Tidsregistrering App",
   "icons": [
     {
-      "src": "icons/icon-192x192.png",
-      "sizes": "192x192",
+      "src": "icons/icon-192.png",
       "type": "image/png",
-      "purpose": "any maskable"
+      "sizes": "192x192"
     },
     {
-      "src": "icons/icon-512x512.png",
-      "sizes": "512x512",
+      "src": "icons/icon-512.png",
       "type": "image/png",
-      "purpose": "any maskable"
+      "sizes": "512x512"
     }
-  ]
+  ],
+  "start_url": "/",
+  "background_color": "#f3f4f6",
+  "theme-color": "#4f46e5",
+  "display": "standalone",
+  "orientation": "portrait"
 }

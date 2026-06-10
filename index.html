@@ -4,247 +4,1105 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tidsregistrering</title>
-    <link rel="manifest" href="/manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tidsreg">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"> 
     <meta name="theme-color" content="#4f46e5">
+
     <style>
-        :root {
-            --primary: #4f46e5;
-            --bg: #f3f4f6;
-            --card: #ffffff;
-            --text: #1f2937;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 15px;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .version { font-size: 0.8rem; color: #6b7280; }
-        .card {
-            background: var(--card);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .aar-section { margin-bottom: 15px; }
-        .aar-titel { font-size: 1.4rem; color: var(--primary); margin: 10px 0; }
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .container { max-width: 800px; margin: 2rem auto; padding: 2rem; background-color: white; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); position: relative; }
+        .version-number { position: absolute; bottom: 5px; right: 10px; font-size: 0.7rem; color: #9ca3af; }
+        .form-input, .form-select, .form-textarea, .form-checkbox { border-radius: 0.375rem; border: 1px solid #d1d5db; padding: 0.5rem 0.75rem; width: 100%; transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25); }
+        .form-checkbox { width: auto; padding: 0; margin-right: 0.5rem; margin-left:0.25rem; border-radius: 0.25rem; color: #4f46e5; }
+        .form-select:disabled, .form-input:disabled { background-color: #e5e7eb; cursor: not-allowed; opacity: 0.7; }
+        .form-select option.time-slot-booked { color: red !important; }
+        .form-select option.time-slot-available { color: green !important; }
+        .form-select option.time-slot-blocked { color: #b91c1c !important; }
+        .btn { padding: 0.625rem 1.25rem; border-radius: 0.375rem; font-weight: 500; transition: background-color 0.15s ease-in-out; cursor: pointer; text-align: center; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background-color: #4f46e5; color: white; }
+        .btn-primary:hover:not(:disabled) { background-color: #4338ca; }
+        .btn-secondary { background-color: #6b7280; color: white; }
+        .btn-secondary:hover:not(:disabled) { background-color: #4b5563; }
+        .btn-success { background-color: #16a34a; color: white; }
+        .btn-success:hover:not(:disabled) { background-color: #15803d; }
+        .btn-warning { background-color: #f59e0b; color: white; }
+        .btn-warning:hover:not(:disabled) { background-color: #d97706; }
+        .btn-info { background-color: #3b82f6; color: white; }
+        .btn-info:hover:not(:disabled) { background-color: #2563eb; }
+        .btn-danger { background-color: #dc2626; color: white; }
+        .btn-danger:hover:not(:disabled) { background-color: #b91c1c; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+        th, td { border: 1px solid #e5e7eb; padding: 0.4rem; text-align: left; font-size: 0.75rem; vertical-align: top; }
+        th { background-color: #f9fafb; font-weight: 600; white-space: nowrap; }
+        td .fa-pencil, td .fa-trash-can { cursor: pointer; margin-right: 8px; }
         
-        /* Fold-ud menustruktur */
-        .uge-header {
-            background: #e5e7eb;
-            padding: 10px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            display: flex;
-            justify-content: space-between;
-            margin-top: 5px;
-        }
-        .uge-indhold {
-            display: none;
-            padding: 10px 5px;
-        }
-        .uge-indhold.open {
-            display: block;
-        }
-        .dag-række {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .dag-række label { width: 80px; font-weight: 500; }
-        input[type="number"] {
-            width: 70px;
-            padding: 6px;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-        }
-        button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            width: 100%;
-            font-size: 1rem;
-            margin-top: 10px;
-        }
-        button:active { opacity: 0.9; }
-        .btn-send { background: #10b981; }
+        .year-header-row, .week-header-row, .day-header-row { cursor: pointer; user-select: none; }
+        .year-header-row td { background-color: #e5e7eb !important; font-weight: bold; font-size: 0.85rem; color: #374151; padding: 0.6rem 0.5rem; }
+        .week-header-row td { background-color: #f3f4f6 !important; font-weight: bold; font-size: 0.8rem; color: #4b5563; padding: 0.5rem 1rem !important; }
+        .day-header-row td { background-color: #f9fafb !important; font-weight: 600; font-size: 0.75rem; color: #6b7280; padding: 0.4rem 2rem !important; }
+        .entry-row td:first-child { padding-left: 3rem !important; } 
+        
+        .toggle-icon { margin-right: 0.5em; transition: transform 0.2s; display: inline-block; }
+        .toggle-icon.expanded { transform: rotate(90deg); }
+        .error-message { color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem; min-height: 1.25rem; }
+        .quick-entry-section { background-color: #f9fafb; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid #e5e7eb; }
+        .quick-entry-section .grid { align-items: end; }
+        .tooltip { position: relative; display: inline-block; cursor: help; }
+        .tooltip .tooltiptext { visibility: hidden; width: 250px; background-color: #555; color: #fff; text-align: left; border-radius: 6px; padding: 8px; position: absolute; z-index: 10; bottom: 125%; left: 50%; margin-left: -125px; opacity: 0; transition: opacity 0.3s; font-size: 0.75rem; font-weight: normal; }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); align-items: center; justify-content: center; }
+        .modal-content { background-color: #fefefe; margin: auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 600px; border-radius: 0.5rem; box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19); }
+        .modal-close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; }
+        .modal-close-btn:hover, .modal-close-btn:focus { color: black; text-decoration: none; cursor: pointer; }
     </style>
 </head>
 <body>
+    <div class="container">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-700">Tidsregistrering</h1>
+            <button id="openSettingsModalBtn" class="btn btn-secondary px-3 py-2"><i class="fas fa-cog"></i></button>
+        </div>
 
-    <header>
-        <h2>Tidsregistrering</h2>
-        <span class="version">v1.3.0</span>
-    </header>
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close-btn" id="closeSettingsModalBtn">&times;</span>
+                <h3 class="text-xl font-semibold mb-4 text-gray-700">Indstillinger</h3>
+                <form id="settingsForm" class="space-y-4">
+                    <div>
+                        <label for="recipientEmail" class="block text-sm font-medium text-gray-700">Modtager Email (til ugeseddel):</label>
+                        <input type="email" id="recipientEmail" class="form-input mt-1" placeholder="f.eks. bogholderi@firma.dk">
+                    </div>
+                    <div>
+                        <label for="ccEmail" class="block text-sm font-medium text-gray-700">CC Email (valgfri):</label>
+                        <input type="email" id="ccEmail" class="form-input mt-1" placeholder="f.eks. chef@firma.dk">
+                    </div>
+                    <div>
+                        <label for="employeeName" class="block text-sm font-medium text-gray-700">Medarbejder Navn:</label>
+                        <input type="text" id="employeeName" class="form-input mt-1" placeholder="Dit fulde navn" required>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="timeIntervalSetting" class="block text-sm font-medium text-gray-700">Tidsinterval (minutter):</label>
+                            <input type="number" id="timeIntervalSetting" class="form-input mt-1" min="5" max="60" step="5" value="15">
+                        </div>
+                        <div>
+                            <label for="pauseLengthSetting" class="block text-sm font-medium text-gray-700">Standard pause (minutter):</label>
+                            <input type="number" id="pauseLengthSetting" class="form-input mt-1" min="0" max="120" step="5" value="30">
+                        </div>
+                    </div>
 
-    <div id="menu-container"></div>
+                    <div>
+                        <label for="siteLocationsSettings" class="block text-sm font-medium text-gray-700">
+                            Byggepladser & Placeringer
+                            <span class="tooltip text-gray-500">(?)
+                                <span class="tooltiptext">Indtast én byggeplads pr. linje.<br>Format: <code>Byggeplads Navn: Placering 1, Placering 2</code></span>
+                            </span>
+                        </label>
+                        <textarea id="siteLocationsSettings" rows="5" class="form-textarea mt-1" placeholder="Eksempel:&#10;Hovedkontor: Mødelokale A, Kantine"></textarea>
+                    </div>
+                    <div class="mt-6">
+                         <button type="button" id="exportCsvBtnModal" class="btn btn-info w-full mb-2">Eksporter til CSV</button>
+                    </div>
+                     <button type="submit" class="btn btn-success w-full">Gem Indstillinger</button>
+                    <div id="settingsStatus" class="text-sm mt-2"></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="quick-entry-section">
+             <h3 class="text-lg font-semibold mb-3 text-gray-600">Hurtig Registrering (Hele Dagen)</h3>
+             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <div>
+                     <label for="quickEntryDate" class="block text-sm font-medium text-gray-700">Vælg Dato:</label>
+                     <input type="date" id="quickEntryDate" class="form-input mt-1" required>
+                 </div>
+                 <div class="flex space-x-2">
+                     <button type="button" id="registerSickBtn" class="btn btn-warning w-full">Registrer Syg</button>
+                     <button type="button" id="registerFreeBtn" class="btn btn-info w-full">Registrer Fri/Ferie</button>
+                 </div>
+                 <div id="quickEntryError" class="error-message md:col-span-3"></div>
+             </div>
+        </div>
+
+        <div id="freeDayTypeModal" class="modal">
+            <div class="modal-content">
+                <span class="modal-close-btn" id="closeFreeDayTypeModalBtn">&times;</span>
+                <h3 class="text-lg font-semibold mb-3">Vælg Type Fravær</h3>
+                <div class="space-y-3">
+                    <button id="registerFerieHeleDageBtn" class="btn btn-primary w-full">Ferie (Hele Dage)</button>
+                    <div>
+                        <label for="friTimerInput" class="block text-sm font-medium text-gray-700">Fri (Antal Timer):</label>
+                        <input type="number" id="friTimerInput" min="0.5" step="0.5" class="form-input mt-1" placeholder="F.eks. 3.5">
+                        <button id="registerFriTimerBtn" class="btn btn-primary w-full mt-2">Registrer Fri (Timer)</button>
+                    </div>
+                </div>
+                <div id="freeDayTypeError" class="error-message mt-3"></div>
+            </div>
+        </div>
+
+        <form id="timeRegistrationForm" class="space-y-4 mt-6">
+             <h3 class="text-lg font-semibold mb-3 text-gray-600" id="formHeading">Normal Registrering</h3>
+            <input type="hidden" id="editingEntryId" value="">
+            <div>
+                <label for="dato" class="block text-sm font-medium text-gray-700">Dato:</label>
+                <input type="date" id="dato" class="form-input mt-1" required>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="byggeplads" class="block text-sm font-medium text-gray-700">Byggeplads:</label>
+                    <select id="byggeplads" class="form-select mt-1">
+                        <option value="">-- Vælg Byggeplads --</option>
+                    </select>
+                </div>
+                 <div>
+                    <label for="placering" class="block text-sm font-medium text-gray-700">Placering:</label>
+                    <select id="placering" class="form-select mt-1" disabled>
+                         <option value="">-- Vælg Byggeplads Først --</option>
+                    </select>
+                </div>
+            </div>
+             <div>
+                <label for="opgave" class="block text-sm font-medium text-gray-700">Opgave:</label>
+                <input type="text" id="opgave" class="form-input mt-1" placeholder="F.eks. Montering af vinduer, Oprydning">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="startTid" class="block text-sm font-medium text-gray-700">Starttid:</label>
+                    <select id="startTid" class="form-select mt-1" required></select>
+                </div>
+                <div>
+                    <label for="slutTid" class="block text-sm font-medium text-gray-700">Sluttid:</label>
+                    <select id="slutTid" class="form-select mt-1" required></select>
+                </div>
+            </div>
+
+             <div class="mt-2 space-y-2 md:space-y-0 md:flex md:items-center md:space-x-4">
+                 <div class="flex items-center">
+                     <input type="checkbox" id="holdtPause" class="form-checkbox h-4 w-4">
+                     <label for="holdtPause" class="ml-1 text-sm font-medium text-gray-700">Pause afholdt</label>
+                 </div>
+                 <div class="flex items-center">
+                     <input type="checkbox" id="ekstraarbejde" class="form-checkbox h-4 w-4">
+                     <label for="ekstraarbejde" class="ml-1 text-sm font-medium text-gray-700">Ekstraarbejde</label>
+                 </div>
+             </div>
+
+            <div>
+                <label for="materialer" class="block text-sm font-medium text-gray-700">Materialeforbrug:</label>
+                <textarea id="materialer" rows="2" class="form-textarea mt-1" placeholder="F.eks. 10m kabel..."></textarea>
+            </div>
+            <div>
+                <label for="beskrivelse" class="block text-sm font-medium text-gray-700">Evt. Bemærkninger:</label>
+                <textarea id="beskrivelse" rows="2" class="form-textarea mt-1" placeholder="Yderligere detaljer..."></textarea>
+            </div>
+
+            <div id="formError" class="error-message"></div>
+
+            <div class="flex space-x-2">
+                <button type="submit" id="submitBtn" class="btn btn-primary w-full">Tilføj Post</button>
+                <button type="button" id="cancelEditBtn" class="btn btn-secondary w-full" style="display:none;">Annuller</button>
+            </div>
+        </form>
+
+        <div id="statusMessage" class="mt-4"></div> 
+        
+        <h2 class="text-xl font-semibold mt-8 mb-4 text-gray-700">Registrerede Timer</h2>
+        <div class="overflow-x-auto">
+            <table id="entriesTable">
+                <thead>
+                    <tr>
+                        <th>Dato</th>
+                        <th>Uge</th>
+                        <th>Dag</th>
+                        <th>Byggeplads</th>
+                        <th>Placering</th>
+                        <th>Opgave</th>
+                        <th>Start</th>
+                        <th>Slut</th>
+                        <th>Pause</th>
+                        <th>Timer</th>
+                        <th>Ekstra</th>
+                        <th>Materialer</th>
+                        <th>Bemærk.</th>
+                        <th>Handling</th>
+                    </tr>
+                </thead>
+                <tbody id="entriesBody"></tbody>
+            </table>
+        </div>
+        <div id="noEntriesMessage" class="text-gray-500 mt-4 text-center" style="display: none;">Ingen registreringer endnu.</div>
+
+        <div class="mt-6 flex space-x-2">
+            <button id="sendEmailBtn" class="btn btn-success w-full">Send Ugeseddel</button>
+        </div>
+        <p class="text-xs text-gray-500 mt-2 text-center">Sørg for at indstillinger er gemt før afsendelse.</p>
+        <div id="emailStatus" class="mt-2"></div>
+
+        <div class="version-number">v1.3</div>
+    </div>
+
+    <!-- Modals for week selection & CSV -->
+    <div id="weekSelectionModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close-btn" id="closeWeekSelectionModalBtn">&times;</span>
+            <h3 class="text-lg font-semibold mb-3">Vælg Uger til Afsendelse</h3>
+            <div id="weekCheckboxesContainer" class="mb-4 max-h-60 overflow-y-auto"></div>
+            <div class="flex justify-end space-x-2">
+                <button id="cancelWeekSelectionBtn" class="btn btn-secondary">Annuller</button>
+                <button id="confirmWeekSelectionBtn" class="btn btn-primary">Send Valgte Uger</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="csvExportModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close-btn" id="closeCsvExportModalBtn">&times;</span>
+            <h3 class="text-lg font-semibold mb-3">Vælg Filtre for CSV Eksport</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Vælg Uger (alle hvis ingen valgt):</label>
+                    <div id="csvWeekCheckboxesContainer" class="max-h-40 overflow-y-auto border p-2 rounded"></div>
+                </div>
+                <div>
+                    <label for="csvByggepladsSelect" class="block text-sm font-medium text-gray-700">Vælg Byggeplads (alle hvis ingen valgt):</label>
+                    <select id="csvByggepladsSelect" class="form-select mt-1">
+                        <option value="">-- Alle Byggepladser --</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-2">
+                <button id="cancelCsvExportBtn" class="btn btn-secondary">Annuller</button>
+                <button id="confirmCsvExportBtn" class="btn btn-primary">Eksporter CSV</button>
+            </div>
+             <div id="csvExportStatus" class="text-sm mt-2"></div>
+        </div>
+    </div>
 
     <script>
-        // --- CONFIG & DATA ---
-        const dagsNavne = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
+        const settingsModal = document.getElementById('settingsModal');
+        const openSettingsModalBtn = document.getElementById('openSettingsModalBtn');
+        const closeSettingsModalBtn = document.getElementById('closeSettingsModalBtn');
+        const settingsForm = document.getElementById('settingsForm');
+        const timeRegistrationForm = document.getElementById('timeRegistrationForm');
+        const formHeading = document.getElementById('formHeading');
+        const submitBtn = document.getElementById('submitBtn');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+
+        const startTidSelect = document.getElementById('startTid');
+        const slutTidSelect = document.getElementById('slutTid');
+        const entriesBody = document.getElementById('entriesBody');
+        const formError = document.getElementById('formError');
+        const settingsStatus = document.getElementById('settingsStatus');
+        const statusMessage = document.getElementById('statusMessage'); 
+        const noEntriesMessage = document.getElementById('noEntriesMessage');
+        const entriesTable = document.getElementById('entriesTable');
+        const sendEmailBtn = document.getElementById('sendEmailBtn'); 
+        const emailStatus = document.getElementById('emailStatus');
+        const exportCsvBtnModal = document.getElementById('exportCsvBtnModal');
         
-        // Hent eksisterende data eller opret en tom struktur
-        // Data gemmes nu unikt pr. år og uge: { "2026-Uge 24": { "Mandag": 7.4, ... } }
-        let tidsData = JSON.parse(localStorage.getItem('tidsData_v2')) || {};
+        const csvExportModal = document.getElementById('csvExportModal');
+        const closeCsvExportModalBtn = document.getElementById('closeCsvExportModalBtn');
+        const csvWeekCheckboxesContainer = document.getElementById('csvWeekCheckboxesContainer');
+        const csvByggepladsSelect = document.getElementById('csvByggepladsSelect');
+        const cancelCsvExportBtn = document.getElementById('cancelCsvExportBtn');
+        const confirmCsvExportBtn = document.getElementById('confirmCsvExportBtn');
+        const csvExportStatus = document.getElementById('csvExportStatus');
 
-        // Hjælpefunktion til at finde aktuelt ugenummer (ISO-8601)
-        function getUgeNummer(d) {
-            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-            const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-            return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+        const quickEntryDateInput = document.getElementById('quickEntryDate');
+        const registerSickBtn = document.getElementById('registerSickBtn');
+        const registerFreeBtn = document.getElementById('registerFreeBtn'); 
+        const quickEntryError = document.getElementById('quickEntryError');
+
+        const freeDayTypeModal = document.getElementById('freeDayTypeModal');
+        const closeFreeDayTypeModalBtn = document.getElementById('closeFreeDayTypeModalBtn');
+        const registerFerieHeleDageBtn = document.getElementById('registerFerieHeleDageBtn');
+        const friTimerInput = document.getElementById('friTimerInput');
+        const registerFriTimerBtn = document.getElementById('registerFriTimerBtn');
+        const freeDayTypeError = document.getElementById('freeDayTypeError');
+
+        const recipientEmailInput = document.getElementById('recipientEmail');
+        const ccEmailInput = document.getElementById('ccEmail'); 
+        const employeeNameInput = document.getElementById('employeeName');
+        const timeIntervalInput = document.getElementById('timeIntervalSetting');
+        const pauseLengthInput = document.getElementById('pauseLengthSetting');
+        const siteLocationsSettingsTextarea = document.getElementById('siteLocationsSettings');
+        const datoInput = document.getElementById('dato');
+        const byggepladsSelect = document.getElementById('byggeplads');
+        const placeringSelect = document.getElementById('placering');
+        const opgaveInput = document.getElementById('opgave');
+        const holdtPauseCheckbox = document.getElementById('holdtPause');
+        const ekstraarbejdeCheckbox = document.getElementById('ekstraarbejde');
+        const materialerInput = document.getElementById('materialer');
+        const beskrivelseInput = document.getElementById('beskrivelse');
+
+        const weekSelectionModal = document.getElementById('weekSelectionModal');
+        const weekCheckboxesContainer = document.getElementById('weekCheckboxesContainer');
+        const cancelWeekSelectionBtn = document.getElementById('cancelWeekSelectionBtn');
+        const confirmWeekSelectionBtn = document.getElementById('confirmWeekSelectionBtn');
+        const closeWeekSelectionModalBtn = document.getElementById('closeWeekSelectionModalBtn');
+
+        let weeklyEntries = [];
+        let settings = { siteLocations: [], ccEmail: '', interval: 15, pauseLength: 30 }; 
+        const standardByggepladsOptionsForForm = ["Andet"]; 
+        let lastSelectedByggeplads = '';
+        let lastSelectedPlacering = '';
+        let currentlyEditingId = null;
+
+        function sanitizeClassName(str) {
+            return str.replace(/[^a-zA-Z0-9-_]/g, '_');
         }
 
-        const nuværendeAar = new Date().getFullYear();
-        const nuværendeUge = getUgeNummer(new Date());
-
-        // --- FIX: Klassesanitering (Fjerner mellemrum så querySelector ikke fejler) ---
-        function sanitizeClassName(input) {
-            return input.toString().replace(/\s+/g, '-').toLowerCase();
-        }
-
-        // --- RENDERING AF MENUSTRUKTUR (År -> Uge -> Dag) ---
-        function bygMenu() {
-            const container = document.getElementById('menu-container');
-            container.innerHTML = '';
-
-            // Vi genererer for i år og sidste år som eksempel
-            const aarAtVise = [nuværendeAar, nuværendeAar - 1];
-
-            aarAtVise.forEach(aar => {
-                const aarDiv = document.createElement('div');
-                aarDiv.className = 'aar-section';
-                aarDiv.innerHTML = `<div class="aar-titel">${aar}</div>`;
-
-                // Vis f.eks. 5 uger tilbage fra nuværende uge (eller hele året hvis man vil)
-                // Her laver vi ugerne for det pågældende år
-                for (let u = 52; u >= 1; u--) {
-                    // Vi viser kun uger op til den nuværende, hvis det er i år
-                    if (aar === nuværendeAar && u > nuværendeUge + 2) continue; 
-                    
-                    const ugeStreng = `Uge ${u}`;
-                    const unikNøgle = `${aar}-${ugeStreng}`; // FIX: Sikrer unik nøgle på tværs af år!
-                    const sanitizedKlasse = sanitizeClassName(unikNøgle);
-
-                    const ugeKort = document.createElement('div');
-                    ugeKort.className = 'card';
-
-                    // Tjek om denne uge skal være åben som standard (Aktuelt år og aktuel uge)
-                    const erAktuelUge = (aar === nuværendeAar && u === nuværendeUge);
-                    const openKlasse = erAktuelUge ? 'open' : '';
-
-                    ugeKort.innerHTML = `
-                        <div class="uge-header" onclick="toggleUge('${sanitizedKlasse}')">
-                            <span>${ugeStreng}</span>
-                            <span class="status-pil">${erAktuelUge ? '▼' : '►'}</span>
-                        </div>
-                        <div class="uge-indhold ${openKlasse}" id="${sanitizedKlasse}">
-                            ${dagsNavne.map(dag => {
-                                const timer = (tidsData[unikNøgle] && tidsData[unikNøgle][dag]) || '';
-                                return `
-                                    <div class="dag-række">
-                                        <label>${dag}</label>
-                                        <input type="number" step="0.1" placeholder="0" 
-                                            value="${timer}" 
-                                            onchange="gemTid('${unikNøgle}', '${dag}', this.value)">
-                                        <span>timer</span>
-                                    </div>
-                                `;
-                            }).join('')}
-                            <button class="btn-send" onclick="sendTimeseddel('${aar}', '${ugeStreng}')">Send ${ugeStreng} (${aar})</button>
-                        </div>
-                    `;
-                    aarDiv.appendChild(ugeKort);
+        function parseSiteLocations(text) {
+            const lines = text.trim().split('\n');
+            const siteData = [];
+            lines.forEach(line => {
+                const parts = line.split(':');
+                const siteName = parts[0]?.trim();
+                if (siteName) {
+                    const locationsRaw = parts[1]?.trim() || '';
+                    const locations = locationsRaw ? locationsRaw.split(',').map(loc => loc.trim()).filter(loc => loc) : [];
+                    siteData.push({ site: siteName, locations: locations });
                 }
-                container.appendChild(aarDiv);
             });
+            return siteData;
         }
 
-        // Fold ud/sammen funktion
-        function toggleUge(id) {
-            const indhold = document.getElementById(id);
-            const pil = indhold.previousElementSibling.querySelector('.status-pil');
-            if (indhold.style.display === 'block' || indhold.classList.contains('open')) {
-                indhold.style.display = 'none';
-                indhold.classList.remove('open');
-                pil.textContent = '►';
-            } else {
-                indhold.style.display = 'block';
-                pil.textContent = '▼';
+        function saveSettings(event) {
+            event.preventDefault();
+            settings = {
+                recipientEmail: recipientEmailInput.value.trim(),
+                ccEmail: ccEmailInput.value.trim(), 
+                employeeName: employeeNameInput.value.trim(),
+                interval: parseInt(timeIntervalInput.value) || 15,
+                pauseLength: parseInt(pauseLengthInput.value) || 30,
+                siteLocationsRaw: siteLocationsSettingsTextarea.value,
+                siteLocations: parseSiteLocations(siteLocationsSettingsTextarea.value)
+            };
+            if (!settings.recipientEmail || !settings.employeeName) { 
+                 settingsStatus.textContent = 'Udfyld venligst modtager email og medarbejdernavn.';
+                 settingsStatus.className = 'text-sm mt-2 text-red-600'; return;
+            }
+            localStorage.setItem('timeRegSettings', JSON.stringify(settings));
+            settingsStatus.textContent = 'Indstillinger gemt!';
+            settingsStatus.className = 'text-sm mt-2 text-green-600';
+            setTimeout(() => { settingsStatus.textContent = ''; settingsStatus.className = 'text-sm mt-2'; }, 3000);
+            populateByggepladsDropdown(); 
+            updateEmailButtonStatus(); 
+            populateTimeDropdowns(datoInput.value);
+            closeSettingsModal();
+        }
+
+        function loadSettings() {
+            const storedSettings = localStorage.getItem('timeRegSettings');
+            if (storedSettings) {
+                settings = JSON.parse(storedSettings);
+                settings.recipientEmail = settings.recipientEmail || '';
+                settings.ccEmail = settings.ccEmail || ''; 
+                settings.employeeName = settings.employeeName || '';
+                settings.interval = parseInt(settings.interval) || 15;
+                settings.pauseLength = parseInt(settings.pauseLength) || 30;
+                settings.siteLocationsRaw = settings.siteLocationsRaw || '';
+                settings.siteLocations = parseSiteLocations(settings.siteLocationsRaw);
+                
+                recipientEmailInput.value = settings.recipientEmail;
+                ccEmailInput.value = settings.ccEmail; 
+                employeeNameInput.value = settings.employeeName;
+                timeIntervalInput.value = settings.interval;
+                pauseLengthInput.value = settings.pauseLength;
+                siteLocationsSettingsTextarea.value = settings.siteLocationsRaw;
+            }
+            populateByggepladsDropdown(); 
+            updateEmailButtonStatus(); 
+        }
+
+        function updateEmailButtonStatus() { 
+            sendEmailBtn.disabled = !(settings.recipientEmail && settings.employeeName); 
+            emailStatus.textContent = sendEmailBtn.disabled ? 'Udfyld og gem modtager og navn i indstillinger for at sende.' : '';
+        }
+
+        function openSettingsModal() { settingsModal.style.display = 'flex'; }
+        function closeSettingsModal() { settingsModal.style.display = 'none'; }
+        openSettingsModalBtn.onclick = openSettingsModal;
+        closeSettingsModalBtn.onclick = closeSettingsModal;
+        
+        function openFreeDayTypeModal() { 
+            freeDayTypeError.textContent = '';
+            friTimerInput.value = ''; 
+            freeDayTypeModal.style.display = 'flex'; 
+        }
+        function closeFreeDayTypeModal() { freeDayTypeModal.style.display = 'none'; }
+        closeFreeDayTypeModalBtn.onclick = closeFreeDayTypeModal;
+        registerFreeBtn.onclick = openFreeDayTypeModal;
+
+        function getTodayString() { return new Date().toISOString().split('T')[0]; }
+
+        function timeToMinutes(timeStr) {
+            if (!timeStr || !timeStr.includes(':')) return 0;
+            const [hours, minutes] = timeStr.split(':').map(Number); return hours * 60 + minutes;
+        }
+
+        function populateTimeDropdowns(selectedDate) {
+            const interval = settings.interval || 15; 
+            startTidSelect.innerHTML = '';
+            slutTidSelect.innerHTML = '';
+
+            const dayEntries = weeklyEntries.filter(entry => entry.dato === selectedDate && entry.id !== currentlyEditingId && entry.startTid && entry.slutTid);
+            const bookedSlots = dayEntries.map(entry => ({
+                start: timeToMinutes(entry.startTid),
+                end: timeToMinutes(entry.slutTid)
+            }));
+
+            for (let minutes = 4 * 60; minutes <= 23 * 60; minutes += interval) {
+                const slotStart = minutes;
+                const slotEnd = minutes + interval; 
+                let isSlotBooked = false;
+
+                for (const booked of bookedSlots) {
+                    if (slotStart < booked.end && slotEnd > booked.start) {
+                        isSlotBooked = true; break; 
+                    }
+                }
+                
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                const timeString = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+                const optionStart = document.createElement('option');
+                optionStart.value = timeString;
+                
+                if (isSlotBooked) {
+                    optionStart.textContent = `${timeString} (Optaget)`;
+                    optionStart.classList.add('time-slot-booked'); 
+                } else {
+                    optionStart.textContent = timeString;
+                    optionStart.classList.add('time-slot-available');
+                }
+                startTidSelect.appendChild(optionStart);
+            }
+            filterSlutTidOptions();
+        }
+        
+        function filterSlutTidOptions() {
+            const selectedStartTid = startTidSelect.value.replace(" (Optaget)", ""); 
+            const selectedDate = datoInput.value;
+            slutTidSelect.innerHTML = ''; 
+            if (!selectedStartTid || !selectedDate) return;
+
+            const startMinutes = timeToMinutes(selectedStartTid);
+            const interval = settings.interval || 15;
+            const dayEntries = weeklyEntries.filter(entry => entry.dato === selectedDate && entry.id !== currentlyEditingId && entry.startTid && entry.slutTid);
+            const bookedSlots = dayEntries.map(entry => ({ start: timeToMinutes(entry.startTid), end: timeToMinutes(entry.slutTid) }));
+
+            for (let minutes = startMinutes + interval; minutes <= 24 * 60; minutes += interval) {
+                const currentIntervalEnd = minutes;   
+                let isPathToThisEndBooked = false;
+                for (const booked of bookedSlots) {
+                    if (booked.start > startMinutes && booked.start < currentIntervalEnd) { 
+                        isPathToThisEndBooked = true; break;
+                    }
+                }
+                
+                const displayMins = minutes === 24 * 60 ? 0 : minutes; 
+                const hours = Math.floor(displayMins / 60) % 24;
+                const mins = displayMins % 60;
+                const timeString = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+                
+                const option = document.createElement('option');
+                option.value = timeString;
+                option.textContent = timeString;
+
+                if (isPathToThisEndBooked) {
+                    option.textContent = `${timeString} (Blokeret)`;
+                    option.classList.add('time-slot-blocked');
+                    option.disabled = true; 
+                } else {
+                    option.classList.add('time-slot-available');
+                }
+                slutTidSelect.appendChild(option);
+            }
+             if (slutTidSelect.options.length === 0 && selectedStartTid) {
+                const option = document.createElement('option');
+                option.textContent = "-- Ingen ledige sluttider --";
+                option.disabled = true;
+                slutTidSelect.appendChild(option);
             }
         }
 
-        // Gemmer data lokalt på telefonen med det samme
-        function gemTid(unikNøgle, dag, værdi) {
-            if (!tidsData[unikNøgle]) tidsData[unikNøgle] = {};
-            tidsData[unikNøgle][dag] = værdi ? parseFloat(værdi.replace(',', '.')) : 0;
-            localStorage.setItem('tidsData_v2', JSON.stringify(tidsData));
+        function getWeekNumber(d) { 
+            const date = new Date(d.getTime());
+            date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+            return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
         }
 
-        // --- FIX: sendTimesedler filtrerer nu præcist på ÅR og UGE ---
-        function sendTimeseddel(aar, uge) {
-            const unikNøgle = `${aar}-${uge}`;
-            const ugeData = tidsData[unikNøgle];
+        function getYearString(dateString) {
+            const date = new Date(dateString + 'T12:00:00');
+            date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+            return date.getUTCFullYear().toString();
+        }
 
-            if (!ugeData || Object.keys(ugeData).length === 0) {
-                alert(`Ingen registreringer fundet for ${uge} i ${aar}`);
+        function getWeekString(dateString) {
+            const date = new Date(dateString + 'T12:00:00');
+            const week = getWeekNumber(date);
+            return `Uge ${String(week).padStart(2, '0')}`;
+        }
+
+        function getYearAndWeek(dateString) {
+            return `${getYearString(dateString)}-${getWeekString(dateString)}`;
+        }
+
+        function getDayName(dateString) { 
+            const date = new Date(dateString + 'T12:00:00');
+            return date.toLocaleDateString('da-DK', { weekday: 'long' });
+        }
+        
+        function calculateDuration(startStr, endStr, holdtPause) {
+            if (!startStr || !endStr) return 0;
+            const startMinutes = timeToMinutes(startStr);
+            let endMinutes = timeToMinutes(endStr);
+            if (endMinutes === 0) endMinutes = 24 * 60; 
+            if (endMinutes <= startMinutes) return 0;
+
+            let grossDurationMinutes = endMinutes - startMinutes;
+            let pauseDurationMinutes = holdtPause ? (settings.pauseLength || 30) : 0;
+
+            const netDurationMinutes = grossDurationMinutes - pauseDurationMinutes;
+            return netDurationMinutes > 0 ? netDurationMinutes / 60 : 0;
+        }
+
+        function populateByggepladsDropdown() { 
+            const currentValue = byggepladsSelect.value;
+            byggepladsSelect.innerHTML = '<option value="">-- Vælg Byggeplads --</option>';
+            settings.siteLocations.forEach(siteInfo => {
+                byggepladsSelect.add(new Option(siteInfo.site, siteInfo.site));
+            });
+            standardByggepladsOptionsForForm.forEach(stdOption => { 
+                 byggepladsSelect.add(new Option(stdOption, stdOption));
+            });
+            byggepladsSelect.add(new Option("Tilføj ny byggeplads...", "ADD_NEW_SITE"));
+            if (currentValue) byggepladsSelect.value = currentValue;
+            updatePlaceringOptions();
+        }
+
+        function updatePlaceringOptions() { 
+            const selectedSiteName = byggepladsSelect.value;
+            placeringSelect.innerHTML = ''; placeringSelect.disabled = true;
+
+            if (!selectedSiteName || selectedSiteName === "ADD_NEW_SITE" || standardByggepladsOptionsForForm.includes(selectedSiteName)) {
+                placeringSelect.add(new Option(selectedSiteName ? '-- Ikke relevant --' : '-- Vælg Byggeplads Først --', ""));
                 return;
             }
 
-            // Byg en pæn besked (Simulerer dataopsamling til Sheets/E-mail)
-            let tekst = `Timeseddel for ${uge} - År ${aar}:\n-------------------------\n`;
-            let totalTimer = 0;
+            const siteInfo = settings.siteLocations.find(s => s.site === selectedSiteName);
+            placeringSelect.disabled = false;
+            placeringSelect.add(new Option("-- Vælg Placering --", ""));
 
-            dagsNavne.forEach(dag => {
-                const timer = ugeData[dag] || 0;
-                tekst += `${dag}: ${timer} timer\n`;
-                totalTimer += parseFloat(timer);
-            });
-
-            tekst += `-------------------------\nTotal: ${totalTimer} timer`;
-
-            // Lige nu viser vi det bare som en popup, indtil Sheets API kører.
-            alert(tekst);
-            console.log("Klar til afsendelse:\n", tekst);
+            if (siteInfo && siteInfo.locations.length > 0) {
+                siteInfo.locations.forEach(location => placeringSelect.add(new Option(location, location)));
+            }
+            placeringSelect.add(new Option("Tilføj ny placering...", "ADD_NEW_PLACERING"));
         }
 
-        // Start appen
-        bygMenu();
+        function handleAddNewSite() {
+            const newSiteName = prompt("Indtast navn på ny byggeplads:");
+            if (newSiteName && newSiteName.trim() !== "") {
+                const trimmedName = newSiteName.trim();
+                if (!settings.siteLocations.find(s => s.site.toLowerCase() === trimmedName.toLowerCase())) {
+                    settings.siteLocations.unshift({ site: trimmedName, locations: [] });
+                    siteLocationsSettingsTextarea.value = settings.siteLocations.map(i => `${i.site}: ${i.locations.join(', ')}`).join('\n'); 
+                    saveSettings(new Event('submit'));
+                    byggepladsSelect.value = trimmedName; 
+                    updatePlaceringOptions(); 
+                } else { alert("Denne byggeplads findes allerede."); byggepladsSelect.value = trimmedName; }
+            } else { byggepladsSelect.value = ""; }
+        }
 
-        // --- AUTOMATISK SERVICE WORKER OPDATERING (ONLINE TJEK) ---
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then((reg) => {
-                        // Hvis vi er online, tvinger vi SW til at lede efter opdateringer med det samme
-                        if (navigator.onLine) {
-                            reg.update();
-                        }
+        function handleAddNewPlacering() {
+            const selectedSiteName = byggepladsSelect.value;
+            const newPlaceringName = prompt(`Indtast navn på ny placering for "${selectedSiteName}":`);
+            if (newPlaceringName && newPlaceringName.trim() !== "") {
+                const trimmedPlacering = newPlaceringName.trim();
+                const siteInfo = settings.siteLocations.find(s => s.site === selectedSiteName);
+                if (siteInfo && !siteInfo.locations.find(loc => loc.toLowerCase() === trimmedPlacering.toLowerCase())) {
+                    siteInfo.locations.unshift(trimmedPlacering);
+                    siteLocationsSettingsTextarea.value = settings.siteLocations.map(i => `${i.site}: ${i.locations.join(', ')}`).join('\n'); 
+                    saveSettings(new Event('submit'));
+                    placeringSelect.value = trimmedPlacering; 
+                } else { alert("Denne placering findes allerede."); placeringSelect.value = trimmedPlacering; }
+            } else { placeringSelect.value = ""; }
+        }
+
+        function showStatusMessage(message, type = 'success', element = statusMessage) { 
+             element.textContent = message;
+             element.className = `my-2 p-3 rounded-md text-sm ${type === 'success' ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-red-100 text-red-700 border border-red-300'}`;
+             setTimeout(() => { if (element.textContent === message) element.textContent = ''; }, 5000);
+        }
+        function toggleNoEntriesMessage() { 
+            noEntriesMessage.style.display = weeklyEntries.length === 0 ? 'block' : 'none';
+            entriesTable.style.display = weeklyEntries.length === 0 ? 'none' : 'table';
+        }
+
+        // --- Ny og forbedret opbygning af Menuen ---
+        function renderEntries() {
+            entriesBody.innerHTML = ''; 
+            if (weeklyEntries.length === 0) { toggleNoEntriesMessage(); return; }
+
+            const todayStr = getTodayString();
+            const currentYearStr = getYearString(todayStr);
+            const currentWeekStr = getWeekString(todayStr);
+
+            // Grupper efter År -> Uge -> Dag
+            const entriesByYear = weeklyEntries.reduce((acc, entry) => {
+                const year = getYearString(entry.dato);
+                if (!acc[year]) acc[year] = {};
+                const week = getWeekString(entry.dato);
+                if (!acc[year][week]) acc[year][week] = [];
+                acc[year][week].push(entry);
+                return acc;
+            }, {});
+
+            const sortedYears = Object.keys(entriesByYear).sort().reverse();
+
+            sortedYears.forEach(yearKey => {
+                const isCurrentYear = (yearKey === currentYearStr);
+
+                // 1. Års Række
+                const yearHeaderRow = entriesBody.insertRow();
+                yearHeaderRow.classList.add('year-header-row');
+                yearHeaderRow.dataset.year = yearKey;
+                let yCell = yearHeaderRow.insertCell();
+                yCell.innerHTML = `<i class="fas fa-caret-right toggle-icon ${isCurrentYear ? 'expanded' : ''}"></i> År ${yearKey}`;
+                yCell.colSpan = entriesTable.tHead.rows[0].cells.length;
+                yCell.addEventListener('click', () => toggleYearVisibility(yearKey));
+
+                const weeksInYear = entriesByYear[yearKey];
+                const sortedWeeks = Object.keys(weeksInYear).sort().reverse();
+
+                sortedWeeks.forEach(weekKey => {
+                    const weekEntries = weeksInYear[weekKey];
+                    let weeklyTotalHours = 0; weekEntries.forEach(e => weeklyTotalHours += e.timer);
+                    const isCurrentWeek = (isCurrentYear && weekKey === currentWeekStr);
+                    const sanitizedWeekClass = sanitizeClassName(weekKey);
+
+                    // 2. Uges Række (Understi)
+                    const weekHeaderRow = entriesBody.insertRow();
+                    weekHeaderRow.classList.add('week-header-row', `year-detail-${yearKey}`);
+                    weekHeaderRow.dataset.year = yearKey;
+                    weekHeaderRow.dataset.week = weekKey;
+                    weekHeaderRow.style.display = isCurrentYear ? 'table-row' : 'none';
+
+                    let wCell = weekHeaderRow.insertCell();
+                    wCell.innerHTML = `<i class="fas fa-caret-right toggle-icon ${isCurrentWeek ? 'expanded' : ''}"></i> ${weekKey} (${weeklyTotalHours.toFixed(2)} timer)`;
+                    wCell.colSpan = entriesTable.tHead.rows[0].cells.length;
+                    wCell.addEventListener('click', (e) => { e.stopPropagation(); toggleWeekVisibility(yearKey, weekKey); });
+
+                    // Grupper efter dag
+                    const entriesByDay = weekEntries.reduce((acc, entry) => {
+                        (acc[entry.dato] = acc[entry.dato] || []).push(entry); return acc;
+                    }, {});
+                    const sortedDays = Object.keys(entriesByDay).sort();
+
+                    sortedDays.forEach(dateKey => {
+                        const dayEntries = entriesByDay[dateKey];
+                        let dailyTotalHours = 0; dayEntries.forEach(e => dailyTotalHours += e.timer);
+
+                        // 3. Dags Række
+                        const dayHeaderRow = entriesBody.insertRow();
+                        dayHeaderRow.classList.add('day-header-row', `year-detail-${yearKey}`, `week-detail-${yearKey}-${sanitizedWeekClass}`);
+                        dayHeaderRow.dataset.date = dateKey;
+                        dayHeaderRow.style.display = isCurrentWeek ? 'table-row' : 'none';
+
+                        let dCell = dayHeaderRow.insertCell();
+                        dCell.innerHTML = `<i class="fas fa-caret-right toggle-icon ${isCurrentWeek ? 'expanded' : ''}"></i> ${getDayName(dateKey)} (${dailyTotalHours.toFixed(2)} timer)`;
+                        dCell.colSpan = entriesTable.tHead.rows[0].cells.length;
+                        dCell.addEventListener('click', (e) => { e.stopPropagation(); toggleDayVisibility(yearKey, weekKey, dateKey); });
+
+                        dayEntries.sort((a,b) => timeToMinutes(a.startTid) - timeToMinutes(b.startTid));
+                        dayEntries.forEach((entry) => {
+                            // 4. Selve tidsregistreringen
+                            const row = entriesBody.insertRow();
+                            row.classList.add('entry-row', `year-detail-${yearKey}`, `week-detail-${yearKey}-${sanitizedWeekClass}`, `day-detail-${yearKey}-${sanitizedWeekClass}-${dateKey}`);
+                            row.style.display = isCurrentWeek ? 'table-row' : 'none';
+
+                            const formattedDate = new Date(entry.dato + 'T12:00:00').toLocaleDateString('da-DK', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                            
+                            row.insertCell().textContent = formattedDate;
+                            row.insertCell().textContent = entry.aarUge.split('-')[1] || '';
+                            row.insertCell().textContent = entry.dag;
+                            row.insertCell().textContent = entry.byggeplads;
+                            row.insertCell().textContent = entry.placering || '-';
+                            row.insertCell().textContent = entry.opgave;
+                            row.insertCell().textContent = entry.startTid || '-';
+                            row.insertCell().textContent = entry.slutTid || '-';
+                            row.insertCell().textContent = entry.holdtPause ? `${entry.pauseMinutes}m` : '0m';
+                            row.insertCell().textContent = entry.timer.toFixed(2);
+                            row.insertCell().textContent = entry.ekstraarbejde ? 'Ja' : 'Nej';
+                            row.insertCell().textContent = entry.materialer || '-';
+                            row.insertCell().textContent = entry.beskrivelse || '-';
+                            
+                            const actionsCell = row.insertCell();
+                            actionsCell.innerHTML = `<i class="fas fa-pencil text-blue-600 hover:text-blue-800" onclick="event.stopPropagation(); loadEntryForEdit(${entry.id})"></i>
+                                                     <i class="fas fa-trash-can text-red-600 hover:text-red-800" onclick="event.stopPropagation(); deleteEntry(${entry.id})"></i>`;
+                        });
                     });
+                });
+            });
+            saveEntriesToLocalStorage(); toggleNoEntriesMessage();
+        }
+
+        function toggleYearVisibility(yearKey) {
+            const weekRows = document.querySelectorAll(`.week-header-row.year-detail-${yearKey}`);
+            const allDetailRows = document.querySelectorAll(`.year-detail-${yearKey}`);
+            const icon = document.querySelector(`.year-header-row[data-year="${yearKey}"] .toggle-icon`);
+            const isHidden = weekRows[0] && weekRows[0].style.display === 'none';
+
+            if (isHidden) {
+                weekRows.forEach(row => row.style.display = 'table-row');
+                icon.classList.add('expanded');
+            } else {
+                allDetailRows.forEach(row => row.style.display = 'none');
+                document.querySelectorAll(`.year-detail-${yearKey} .toggle-icon`).forEach(i => i.classList.remove('expanded'));
+                icon.classList.remove('expanded');
+            }
+        }
+
+        function toggleWeekVisibility(yearKey, weekKey) {
+            const sanitizedWeekClass = sanitizeClassName(weekKey);
+            const dayRows = document.querySelectorAll(`.day-header-row.week-detail-${yearKey}-${sanitizedWeekClass}`);
+            const allDetailRows = document.querySelectorAll(`.week-detail-${yearKey}-${sanitizedWeekClass}`);
+            const icon = document.querySelector(`.week-header-row[data-year="${yearKey}"][data-week="${weekKey}"] .toggle-icon`);
+            const isHidden = dayRows[0] && dayRows[0].style.display === 'none';
+
+            if (isHidden) {
+                dayRows.forEach(row => row.style.display = 'table-row');
+                icon.classList.add('expanded');
+            } else {
+                allDetailRows.forEach(row => {
+                    if (!row.classList.contains('week-header-row')) row.style.display = 'none';
+                });
+                document.querySelectorAll(`.week-detail-${yearKey}-${sanitizedWeekClass} .toggle-icon`).forEach(i => i.classList.remove('expanded'));
+                icon.classList.remove('expanded');
+            }
+        }
+
+        function toggleDayVisibility(yearKey, weekKey, dateKey) {
+            const sanitizedWeekClass = sanitizeClassName(weekKey);
+            const entryRows = document.querySelectorAll(`.entry-row.day-detail-${yearKey}-${sanitizedWeekClass}-${dateKey}`);
+            const icon = document.querySelector(`.day-header-row[data-date="${dateKey}"] .toggle-icon`);
+            const isHidden = entryRows[0] && entryRows[0].style.display === 'none';
+
+            entryRows.forEach(row => row.style.display = isHidden ? 'table-row' : 'none');
+            icon.classList.toggle('expanded', isHidden);
+        }
+
+        function createEntryObject(formData) {
+            const timerToUse = (typeof formData.timer === 'number' && formData.timer !== -1) 
+                ? formData.timer : calculateDuration(formData.startTid, formData.slutTid, formData.holdtPause);
+
+            return {
+                id: formData.id || Date.now() + Math.random(), 
+                dato: formData.dato,
+                aarUge: getYearAndWeek(formData.dato),
+                dag: getDayName(formData.dato),
+                byggeplads: formData.byggeplads || '',
+                placering: formData.placering || '',
+                opgave: formData.opgave || '',
+                startTid: formData.startTid ? formData.startTid.replace(" (Optaget)", "") : null, 
+                slutTid: formData.slutTid ? formData.slutTid.replace(/ \(Optaget\)|\(Blokeret\)/g, "") : null,
+                holdtPause: formData.holdtPause || false,
+                pauseMinutes: formData.pauseMinutes || 0,
+                timer: timerToUse, 
+                ekstraarbejde: formData.ekstraarbejde || false,
+                materialer: formData.materialer || '',
+                beskrivelse: formData.beskrivelse || ''
+            };
+        }
+
+         function handleFormSubmit(event) {
+             event.preventDefault(); formError.textContent = '';
+             const startTidValue = startTidSelect.value.replace(" (Optaget)", ""); 
+             const slutTidValue = slutTidSelect.value.replace(/ \(Optaget\)|\(Blokeret\)/g, "");
+             const dato = datoInput.value; const byggeplads = byggepladsSelect.value;
+             const placering = placeringSelect.disabled ? '' : placeringSelect.value;
+
+             if (!dato) { formError.textContent = 'Vælg venligst en dato.'; return; }
+             if (!byggeplads || byggeplads === "ADD_NEW_SITE") { formError.textContent = 'Vælg venligst en byggeplads.'; return; }
+             if (standardByggepladsOptionsForForm.includes(byggeplads) && (byggeplads === "Syg" || byggeplads === "Fri" || byggeplads === "Ferie")) {
+                 formError.textContent = `Brug knapperne under "Hurtig Registrering" for ${byggeplads}.`; return;
+             }
+             if (!startTidValue || !slutTidValue) { formError.textContent = 'Udfyld venligst starttid og sluttid.'; return; }
+             if (!placeringSelect.disabled && (!placering || placering === "ADD_NEW_PLACERING")) { formError.textContent = 'Vælg placering.'; return; }
+             
+             if (timeToMinutes(slutTidValue) <= timeToMinutes(startTidValue) && timeToMinutes(slutTidValue) !== 0) {
+                 formError.textContent = 'Sluttid skal være efter starttid.'; return;
+             }
+             
+             const newOrUpdatedEntry = createEntryObject({
+                 id: currentlyEditingId, dato: dato, byggeplads: byggeplads,
+                 placering: placering === "Andet (specificer)" ? "Andet (specificer)" : placering,
+                 opgave: opgaveInput.value.trim(), startTid: startTidValue, slutTid: slutTidValue,
+                 holdtPause: holdtPauseCheckbox.checked, pauseMinutes: holdtPauseCheckbox.checked ? settings.pauseLength : 0,
+                 ekstraarbejde: ekstraarbejdeCheckbox.checked, materialer: materialerInput.value.trim(), beskrivelse: beskrivelseInput.value.trim()
+             });
+
+             if (currentlyEditingId) {
+                 const index = weeklyEntries.findIndex(e => e.id === currentlyEditingId);
+                 if (index > -1) weeklyEntries[index] = newOrUpdatedEntry;
+                 showStatusMessage('Post opdateret succesfuldt!');
+             } else {
+                 weeklyEntries.push(newOrUpdatedEntry); showStatusMessage('Post tilføjet succesfuldt!');
+             }
+             
+             lastSelectedByggeplads = byggeplads; lastSelectedPlacering = placeringSelect.disabled ? '' : placering;
+             resetFormAndEditingState(); renderEntries();
+         }
+
+        function loadEntryForEdit(entryId) {
+            const entry = weeklyEntries.find(e => e.id === entryId);
+            if (!entry) return;
+
+            currentlyEditingId = entryId;
+            formHeading.textContent = "Rediger Registrering";
+            submitBtn.textContent = "Gem Ændringer";
+            cancelEditBtn.style.display = 'inline-block';
+
+            datoInput.value = entry.dato;
+            byggepladsSelect.value = entry.byggeplads;
+            updatePlaceringOptions(); placeringSelect.value = entry.placering || ""; 
+            opgaveInput.value = entry.opgave;
+            
+            populateTimeDropdowns(entry.dato); 
+
+            if (entry.startTid) {
+                let cleanStart = entry.startTid.replace(" (Optaget)", "");
+                if (!Array.from(startTidSelect.options).some(opt => opt.value === cleanStart)) { 
+                    startTidSelect.insertBefore(new Option(cleanStart, cleanStart), startTidSelect.firstChild); 
+                }
+                startTidSelect.value = cleanStart; 
+            }
+            filterSlutTidOptions(); 
+             if (entry.slutTid) {
+                 let cleanEnd = entry.slutTid.replace(/ \(Optaget\)|\(Blokeret\)/g, "");
+                 if(!Array.from(slutTidSelect.options).some(opt => opt.value === cleanEnd)){
+                    slutTidSelect.insertBefore(new Option(cleanEnd, cleanEnd), slutTidSelect.firstChild);
+                 }
+                slutTidSelect.value = cleanEnd; 
+            }
+
+            holdtPauseCheckbox.checked = entry.holdtPause || false;
+            ekstraarbejdeCheckbox.checked = entry.ekstraarbejde || false;
+            materialerInput.value = entry.materialer || '';
+            beskrivelseInput.value = entry.beskrivelse || '';
+            window.scrollTo({ top: timeRegistrationForm.offsetTop - 20, behavior: 'smooth' });
+        }
+
+        function resetFormAndEditingState() {
+            timeRegistrationForm.reset(); currentlyEditingId = null;
+            formHeading.textContent = "Normal Registrering"; submitBtn.textContent = "Tilføj Post";
+            cancelEditBtn.style.display = 'none'; datoInput.value = getTodayString(); 
+            byggepladsSelect.value = lastSelectedByggeplads || ""; 
+            updatePlaceringOptions(); 
+            placeringSelect.value = (lastSelectedPlacering && !placeringSelect.disabled) ? lastSelectedPlacering : "";
+            populateTimeDropdowns(datoInput.value);
+        }
+
+         function registerAbsence(type, hours = null) { 
+             const dato = quickEntryDateInput.value;
+             if (!dato) { showStatusMessage('Vælg dato.', 'error', quickEntryError); return; }
+             
+             let timerValue, description, byggepladsVal;
+             if (type === 'sick') { timerValue = 7.4; description = "Syg"; byggepladsVal = "Syg"; }
+             else if (type === 'ferie-hele-dage') { timerValue = 7.4; description = "Ferie (Hele dage)"; byggepladsVal = "Ferie"; } 
+             else if (type === 'fri-timer') {
+                 if (!hours || isNaN(hours) || hours <= 0) return;
+                 timerValue = parseFloat(hours); description = `Fri (${timerValue} timer)`; byggepladsVal = "Fri";
+             } else return; 
+             
+             weeklyEntries.push(createEntryObject({
+                 dato: dato, byggeplads: byggepladsVal, placering: '-', opgave: description, startTid: null, slutTid: null, 
+                 timer: timerValue, holdtPause: false, pauseMinutes: 0, ekstraarbejde: false, beskrivelse: description
+             }));
+             renderEntries(); populateTimeDropdowns(datoInput.value); 
+             showStatusMessage(`${description} registreret.`); closeFreeDayTypeModal(); 
+         }
+
+        function deleteEntry(entryId) {
+            if (confirm('Er du sikker på, du vil slette denne post?')) {
+                const entryDate = weeklyEntries.find(e => e.id === entryId)?.dato;
+                weeklyEntries = weeklyEntries.filter(entry => entry.id !== entryId);
+                if (currentlyEditingId === entryId) resetFormAndEditingState();
+                renderEntries();
+                if (entryDate === datoInput.value) populateTimeDropdowns(datoInput.value);
+            }
+        }
+
+        function saveEntriesToLocalStorage() { localStorage.setItem('weeklyTimeEntries', JSON.stringify(weeklyEntries)); }
+        function loadEntriesFromLocalStorage() { 
+            const storedEntries = localStorage.getItem('weeklyTimeEntries');
+            if (storedEntries) {
+                weeklyEntries = JSON.parse(storedEntries);
+                 weeklyEntries.forEach(entry => {
+                     entry.id = entry.id || Date.now() + Math.random(); 
+                     entry.timer = parseFloat(entry.timer) || 0;
+                     if (entry.holdtPause === undefined) {
+                         entry.holdtPause = (entry.pause9 || entry.pause12) ? true : false;
+                         let oldPauseMins = 0;
+                         if(entry.pause9) oldPauseMins += 30;
+                         if(entry.pause12) oldPauseMins += 30;
+                         entry.pauseMinutes = oldPauseMins;
+                     }
+                     if (!entry.aarUge || !entry.aarUge.includes('-')) entry.aarUge = getYearAndWeek(entry.dato);
+                 });
+            }
+        }
+
+        function openWeekSelectionModal() {
+            if (weeklyEntries.length === 0) return;
+            const uniqueWeeks = [...new Set(weeklyEntries.map(entry => entry.aarUge))].sort().reverse();
+            weekCheckboxesContainer.innerHTML = ''; 
+            uniqueWeeks.forEach(weekStr => {
+                const label = document.createElement('label'); label.classList.add('block', 'mb-2', 'cursor-pointer');
+                const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.value = weekStr; checkbox.classList.add('mr-2');
+                label.appendChild(checkbox); label.appendChild(document.createTextNode(` ${weekStr}`));
+                weekCheckboxesContainer.appendChild(label);
+            });
+            weekSelectionModal.style.display = 'flex';
+        }
+
+        function closeWeekSelectionModal() { weekSelectionModal.style.display = 'none'; }
+
+        function processAndSendEmail() {
+            const selectedWeeks = Array.from(weekCheckboxesContainer.querySelectorAll('input:checked')).map(cb => cb.value);
+            if (selectedWeeks.length === 0) return;
+            closeWeekSelectionModal();
+
+            const filteredEntries = weeklyEntries.filter(entry => selectedWeeks.includes(entry.aarUge));
+            let subject = `Timeseddel ${selectedWeeks.join(', ')} - ${settings.employeeName}`;
+            
+            let ugeseddelBody = `UGESEDDEL\nMedarbejder: ${settings.employeeName}\n--------------------------------------------------\n`;
+            let grandTotalHours = 0;
+            
+            selectedWeeks.forEach(weekStr => {
+                ugeseddelBody += `\n${weekStr}:\n`;
+                const entriesThisWeek = filteredEntries.filter(e => e.aarUge === weekStr);
+                const entriesByDate = entriesThisWeek.reduce((acc, entry) => { Pand(acc[entry.dato] = acc[entry.dato] || { totalHours: 0 }).totalHours += entry.timer; return acc; }, {});
+                let subTotal = 0;
+                Object.keys(entriesByDate).sort().forEach(dateKey => {
+                    ugeseddelBody += `  ${getDayName(dateKey)} (${new Date(dateKey).toLocaleDateString('da-DK')}): ${entriesByDate[dateKey].totalHours.toFixed(2)} timer\n`;
+                    subTotal += entriesByDate[dateKey].totalHours;
+                });
+                ugeseddelBody += `  Total for ${weekStr}: ${subTotal.toFixed(2)} timer\n`;
+                grandTotalHours += subTotal;
+            });
+            ugeseddelBody += `--------------------------------------------------\nTOTAL TIMER: ${grandTotalHours.toFixed(2)}\n\n\n`;
+
+            let arbejdseddelBody = `ARBEJDSSEDDEL\n--------------------------------------------------\n`;
+            const entriesBySite = filteredEntries.reduce((acc, entry) => {
+                const site = entry.byggeplads; const placering = entry.placering || 'Ikke specificeret';
+                if (!acc[site]) acc[site] = { total: 0, placeringer: {} };
+                if (!acc[site].placeringer[placering]) acc[site].placeringer[placering] = { total: 0, entries: [] };
+                acc[site].total += entry.timer; acc[site].placeringer[placering].total += entry.timer; acc[site].placeringer[placering].entries.push(entry);
+                return acc;
+            }, {});
+
+            Object.keys(entriesBySite).sort().forEach(siteKey => {
+                arbejdseddelBody += `BYGGEPLADS: ${siteKey} (${entriesBySite[siteKey].total.toFixed(2)} timer)\n`;
+                Object.keys(entriesBySite[siteKey].placeringer).sort().forEach(placeringKey => {
+                    arbejdseddelBody += `  Placering: ${placeringKey} (${entriesBySite[siteKey].placeringer[placeringKey].total.toFixed(2)} timer)\n`;
+                    entriesBySite[siteKey].placeringer[placeringKey].entries.sort((a,b) => new Date(a.dato) - new Date(b.dato)).forEach(entry => {
+                        arbejdseddelBody += `    ${new Date(entry.dato).toLocaleDateString('da-DK')} - Opgave: ${entry.opgave || '-'} - Timer: ${entry.timer.toFixed(2)}${entry.ekstraarbejde ? ' (Ekstra)' : ''}\n`;
+                    });
+                });
+                arbejdseddelBody += `\n`; 
             });
 
-            // Hvis browseren opdager en ny SW, genindlæses siden automatisk
-            let refreshing = false;
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (!refreshing) {
-                    refreshing = true;
-                    window.location.reload();
-                }
-            });
+            window.location.href = `mailto:${settings.recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(ugeseddelBody + arbejdseddelBody)}`;
         }
+
+        function openCsvExportModal() {
+            if (weeklyEntries.length === 0) return;
+            const uniqueWeeks = [...new Set(weeklyEntries.map(entry => entry.aarUge))].sort().reverse();
+            csvWeekCheckboxesContainer.innerHTML = '';
+            uniqueWeeks.forEach(weekStr => {
+                const label = document.createElement('label'); label.classList.add('block', 'mb-1');
+                const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.value = weekStr; checkbox.classList.add('mr-2');
+                label.appendChild(checkbox); label.appendChild(document.createTextNode(` ${weekStr}`));
+                csvWeekCheckboxesContainer.appendChild(label);
+            });
+            csvByggepladsSelect.innerHTML = '<option value="">-- Alle Byggepladser --</option>';
+            [...new Set(weeklyEntries.map(e => e.byggeplads))].sort().forEach(site => {
+                if(site && site !== "Syg" && site !== "Fri" && site !== "Ferie") csvByggepladsSelect.add(new Option(site, site));
+            });
+            csvExportModal.style.display = 'flex';
+        }
+
+        function closeCsvExportModal() { csvExportModal.style.display = 'none'; }
+        
+        function processAndExportCSV() {
+            const selectedWeeks = Array.from(csvWeekCheckboxesContainer.querySelectorAll('input:checked')).map(cb => cb.value);
+            const selectedSite = csvByggepladsSelect.value;
+            let filtered = [...weeklyEntries];
+            if (selectedWeeks.length > 0) filtered = filtered.filter(e => selectedWeeks.includes(e.aarUge));
+            if (selectedSite) filtered = filtered.filter(e => e.byggeplads === selectedSite);
+            closeCsvExportModal();
+
+            const headers = ["Dato", "År/Uge", "Dag", "Byggeplads", "Placering", "Opgave", "Starttid", "Sluttid", "Pausetid (min)", "Timer (Netto)", "Ekstraarbejde", "Materialer", "Beskrivelse"];
+            let csvContent = headers.join(";") + "\n"; 
+            filtered.sort((a,b) => new Date(a.dato) - new Date(b.dato)).forEach(entry => {
+                csvContent += [
+                    new Date(entry.dato).toLocaleDateString('da-DK'), entry.aarUge, entry.dag,
+                    `"${entry.byggeplads}"`, `"${entry.placering || '-'}"`, `"${entry.opgave || '-'}"`,
+                    entry.startTid || '-', entry.slutTid || '-', entry.pauseMinutes, entry.timer.toFixed(2).replace('.',','), 
+                    entry.ekstraarbejde ? "Ja" : "Nej", `"${entry.materialer || '-'}"`, `"${entry.beskrivelse || '-'}"`
+                ].join(";") + "\n";
+            });
+
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }));
+            link.download = `tidsreg_${getTodayString()}.csv`;
+            link.click();
+        }
+
+        settingsForm.addEventListener('submit', saveSettings);
+        timeRegistrationForm.addEventListener('submit', handleFormSubmit);
+        cancelEditBtn.addEventListener('click', resetFormAndEditingState);
+        sendEmailBtn.addEventListener('click', openWeekSelectionModal); 
+        confirmWeekSelectionBtn.addEventListener('click', processAndSendEmail);
+        cancelWeekSelectionBtn.addEventListener('click', closeWeekSelectionModal);
+        closeWeekSelectionModalBtn.addEventListener('click', closeWeekSelectionModal); 
+        exportCsvBtnModal.addEventListener('click', openCsvExportModal);
+        confirmCsvExportBtn.addEventListener('click', processAndExportCSV);
+        cancelCsvExportBtn.addEventListener('click', closeCsvExportModal);
+        closeCsvExportModalBtn.addEventListener('click', closeCsvExportModal);
+        registerSickBtn.addEventListener('click', () => registerAbsence('sick'));
+        registerFerieHeleDageBtn.addEventListener('click', () => registerAbsence('ferie-hele-dage'));
+        registerFriTimerBtn.addEventListener('click', () => registerAbsence('fri-timer', friTimerInput.value));
+
+        byggepladsSelect.addEventListener('change', (e) => {
+            if (e.target.value === "ADD_NEW_SITE") handleAddNewSite();
+            else { updatePlaceringOptions(); lastSelectedPlacering = ''; placeringSelect.value = ''; }
+        });
+        placeringSelect.addEventListener('change', (e) => { if (e.target.value === "ADD_NEW_PLACERING") handleAddNewPlacering(); });
+        datoInput.addEventListener('change', () => populateTimeDropdowns(datoInput.value));
+        startTidSelect.addEventListener('change', filterSlutTidOptions);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = getTodayString(); datoInput.value = today; quickEntryDateInput.value = today;
+            loadSettings(); loadEntriesFromLocalStorage(); renderEntries();
+            populateTimeDropdowns(datoInput.value);
+        });
     </script>
 </body>
 </html>

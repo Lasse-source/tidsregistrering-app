@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tidsregistrering</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
     <link rel="manifest" href="manifest.json">
@@ -45,10 +45,13 @@
         th, td { border: 1px solid #e5e7eb; padding: 0.4rem; text-align: left; font-size: 0.75rem; vertical-align: top; }
         th { background-color: #f9fafb; font-weight: 600; white-space: nowrap; }
         td .fa-pencil, td .fa-trash-can { cursor: pointer; margin-right: 8px; }
-        .week-header-row, .day-header-row { cursor: pointer; user-select: none; }
-        .week-header-row td, .day-header-row td { background-color: #f3f4f6; font-weight: bold; }
-        .day-header-row td:first-child { padding-left: 1.5rem; } 
-        .entry-row td:first-child { padding-left: 2.5rem; } 
+        
+        .year-header-row, .week-header-row, .day-header-row { cursor: pointer; user-select: none; }
+        .year-header-row td { background-color: #e5e7eb !important; font-weight: bold; font-size: 0.85rem; color: #374151; padding: 0.6rem 0.5rem; }
+        .week-header-row td { background-color: #f3f4f6 !important; font-weight: bold; font-size: 0.8rem; color: #4b5563; padding: 0.5rem 1rem !important; }
+        .day-header-row td { background-color: #f9fafb !important; font-weight: 600; font-size: 0.75rem; color: #6b7280; padding: 0.4rem 2rem !important; }
+        .entry-row td:first-child { padding-left: 3rem !important; } 
+        
         .toggle-icon { margin-right: 0.5em; transition: transform 0.2s; display: inline-block; }
         .toggle-icon.expanded { transform: rotate(90deg); }
         .error-message { color: #dc2626; font-size: 0.875rem; margin-top: 0.25rem; min-height: 1.25rem; }
@@ -248,9 +251,10 @@
         <p class="text-xs text-gray-500 mt-2 text-center">Sørg for at indstillinger er gemt før afsendelse.</p>
         <div id="emailStatus" class="mt-2"></div>
 
-        <div class="version-number">v1.2</div>
+        <div class="version-number">v1.3</div>
     </div>
 
+    <!-- Modals for week selection & CSV -->
     <div id="weekSelectionModal" class="modal">
         <div class="modal-content">
             <span class="modal-close-btn" id="closeWeekSelectionModalBtn">&times;</span>
@@ -357,6 +361,10 @@
         let lastSelectedPlacering = '';
         let currentlyEditingId = null;
 
+        function sanitizeClassName(str) {
+            return str.replace(/[^a-zA-Z0-9-_]/g, '_');
+        }
+
         function parseSiteLocations(text) {
             const lines = text.trim().split('\n');
             const siteData = [];
@@ -457,7 +465,6 @@
                 end: timeToMinutes(entry.slutTid)
             }));
 
-            // Mulige tider fra 04:00 til 23:00 for at fange alle cases
             for (let minutes = 4 * 60; minutes <= 23 * 60; minutes += interval) {
                 const slotStart = minutes;
                 const slotEnd = minutes + interval; 
@@ -507,7 +514,7 @@
                     }
                 }
                 
-                const displayMins = minutes === 24 * 60 ? 0 : minutes; // Håndter midnat
+                const displayMins = minutes === 24 * 60 ? 0 : minutes; 
                 const hours = Math.floor(displayMins / 60) % 24;
                 const mins = displayMins % 60;
                 const timeString = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
@@ -533,7 +540,6 @@
             }
         }
 
-        // --- Ny logik for År + Uge ---
         function getWeekNumber(d) { 
             const date = new Date(d.getTime());
             date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
@@ -541,27 +547,32 @@
             return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
         }
 
-        function getYearAndWeek(dateString) {
+        function getYearString(dateString) {
             const date = new Date(dateString + 'T12:00:00');
             date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-            const isoYear = date.getUTCFullYear();
+            return date.getUTCFullYear().toString();
+        }
+
+        function getWeekString(dateString) {
+            const date = new Date(dateString + 'T12:00:00');
             const week = getWeekNumber(date);
-            return `${isoYear}-Uge ${String(week).padStart(2, '0')}`;
+            return `Uge ${String(week).padStart(2, '0')}`;
+        }
+
+        function getYearAndWeek(dateString) {
+            return `${getYearString(dateString)}-${getWeekString(dateString)}`;
         }
 
         function getDayName(dateString) { 
             const date = new Date(dateString + 'T12:00:00');
             return date.toLocaleDateString('da-DK', { weekday: 'long' });
         }
-        function getDayOfWeek(dateString) { 
-            const date = new Date(dateString + 'T12:00:00'); return (date.getDay() + 6) % 7;
-        }
         
         function calculateDuration(startStr, endStr, holdtPause) {
             if (!startStr || !endStr) return 0;
             const startMinutes = timeToMinutes(startStr);
             let endMinutes = timeToMinutes(endStr);
-            if (endMinutes === 0) endMinutes = 24 * 60; // Håndter midnat
+            if (endMinutes === 0) endMinutes = 24 * 60; 
             if (endMinutes <= startMinutes) return 0;
 
             let grossDurationMinutes = endMinutes - startMinutes;
@@ -643,99 +654,157 @@
             entriesTable.style.display = weeklyEntries.length === 0 ? 'none' : 'table';
         }
 
+        // --- Ny og forbedret opbygning af Menuen ---
         function renderEntries() {
             entriesBody.innerHTML = ''; 
             if (weeklyEntries.length === 0) { toggleNoEntriesMessage(); return; }
 
-            const entriesByWeek = weeklyEntries.reduce((acc, entry) => {
-                const week = entry.aarUge;
-                (acc[week] = acc[week] || []).push(entry); return acc;
+            const todayStr = getTodayString();
+            const currentYearStr = getYearString(todayStr);
+            const currentWeekStr = getWeekString(todayStr);
+
+            // Grupper efter År -> Uge -> Dag
+            const entriesByYear = weeklyEntries.reduce((acc, entry) => {
+                const year = getYearString(entry.dato);
+                if (!acc[year]) acc[year] = {};
+                const week = getWeekString(entry.dato);
+                if (!acc[year][week]) acc[year][week] = [];
+                acc[year][week].push(entry);
+                return acc;
             }, {});
 
-            const sortedWeeks = Object.keys(entriesByWeek).sort();
+            const sortedYears = Object.keys(entriesByYear).sort().reverse();
 
-            sortedWeeks.forEach(weekKey => {
-                const weekEntries = entriesByWeek[weekKey];
-                let weeklyTotalHours = 0; weekEntries.forEach(e => weeklyTotalHours += e.timer);
+            sortedYears.forEach(yearKey => {
+                const isCurrentYear = (yearKey === currentYearStr);
 
-                const weekHeaderRow = entriesBody.insertRow();
-                weekHeaderRow.classList.add('week-header-row');
-                weekHeaderRow.dataset.week = weekKey;
-                let cell = weekHeaderRow.insertCell();
-                cell.innerHTML = `<i class="fas fa-caret-right toggle-icon"></i> ${weekKey} (${weeklyTotalHours.toFixed(2)} timer)`;
-                cell.colSpan = entriesTable.tHead.rows[0].cells.length; 
-                cell.addEventListener('click', () => toggleWeekVisibility(weekKey));
+                // 1. Års Række
+                const yearHeaderRow = entriesBody.insertRow();
+                yearHeaderRow.classList.add('year-header-row');
+                yearHeaderRow.dataset.year = yearKey;
+                let yCell = yearHeaderRow.insertCell();
+                yCell.innerHTML = `<i class="fas fa-caret-right toggle-icon ${isCurrentYear ? 'expanded' : ''}"></i> År ${yearKey}`;
+                yCell.colSpan = entriesTable.tHead.rows[0].cells.length;
+                yCell.addEventListener('click', () => toggleYearVisibility(yearKey));
 
-                const entriesByDay = weekEntries.reduce((acc, entry) => {
-                    (acc[entry.dato] = acc[entry.dato] || []).push(entry); return acc;
-                }, {});
-                const sortedDaysInWeek = Object.keys(entriesByDay).sort((a,b) => new Date(a) - new Date(b));
+                const weeksInYear = entriesByYear[yearKey];
+                const sortedWeeks = Object.keys(weeksInYear).sort().reverse();
 
-                sortedDaysInWeek.forEach(dateKey => {
-                    const dayEntries = entriesByDay[dateKey];
-                    let dailyTotalHours = 0; dayEntries.forEach(e => dailyTotalHours += e.timer);
+                sortedWeeks.forEach(weekKey => {
+                    const weekEntries = weeksInYear[weekKey];
+                    let weeklyTotalHours = 0; weekEntries.forEach(e => weeklyTotalHours += e.timer);
+                    const isCurrentWeek = (isCurrentYear && weekKey === currentWeekStr);
+                    const sanitizedWeekClass = sanitizeClassName(weekKey);
 
-                    const dayHeaderRow = entriesBody.insertRow();
-                    dayHeaderRow.classList.add('day-header-row', `week-detail-${weekKey}`);
-                    dayHeaderRow.style.display = 'none'; 
-                    dayHeaderRow.dataset.date = dateKey;
-                    
-                    let dayCell1 = dayHeaderRow.insertCell(); dayCell1.innerHTML = "&nbsp;"; 
-                    let dayCell2 = dayHeaderRow.insertCell();
-                    dayCell2.innerHTML = `<i class="fas fa-caret-right toggle-icon"></i> ${getDayName(dateKey)} (${dailyTotalHours.toFixed(2)} timer)`;
-                    dayCell2.colSpan = entriesTable.tHead.rows[0].cells.length -1;
-                    dayCell2.addEventListener('click', (e) => { e.stopPropagation(); toggleDayVisibility(dateKey, weekKey); });
+                    // 2. Uges Række (Understi)
+                    const weekHeaderRow = entriesBody.insertRow();
+                    weekHeaderRow.classList.add('week-header-row', `year-detail-${yearKey}`);
+                    weekHeaderRow.dataset.year = yearKey;
+                    weekHeaderRow.dataset.week = weekKey;
+                    weekHeaderRow.style.display = isCurrentYear ? 'table-row' : 'none';
 
-                    dayEntries.sort((a,b) => timeToMinutes(a.startTid) - timeToMinutes(b.startTid));
-                    dayEntries.forEach((entry) => {
-                        const row = entriesBody.insertRow();
-                        row.classList.add('entry-row', `week-detail-${weekKey}`, `day-detail-${dateKey}`);
-                        row.style.display = 'none'; 
+                    let wCell = weekHeaderRow.insertCell();
+                    wCell.innerHTML = `<i class="fas fa-caret-right toggle-icon ${isCurrentWeek ? 'expanded' : ''}"></i> ${weekKey} (${weeklyTotalHours.toFixed(2)} timer)`;
+                    wCell.colSpan = entriesTable.tHead.rows[0].cells.length;
+                    wCell.addEventListener('click', (e) => { e.stopPropagation(); toggleWeekVisibility(yearKey, weekKey); });
 
-                        const formattedDate = new Date(entry.dato + 'T12:00:00').toLocaleDateString('da-DK', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                        
-                        row.insertCell().textContent = formattedDate;
-                        row.insertCell().textContent = entry.aarUge.split('-')[1]; // Viser kun "Uge XX"
-                        row.insertCell().textContent = entry.dag;
-                        row.insertCell().textContent = entry.byggeplads;
-                        row.insertCell().textContent = entry.placering || '-';
-                        row.insertCell().textContent = entry.opgave;
-                        row.insertCell().textContent = entry.startTid || '-';
-                        row.insertCell().textContent = entry.slutTid || '-';
-                        row.insertCell().textContent = entry.holdtPause ? `${entry.pauseMinutes}m` : '0m';
-                        row.insertCell().textContent = entry.timer.toFixed(2);
-                        row.insertCell().textContent = entry.ekstraarbejde ? 'Ja' : 'Nej';
-                        row.insertCell().textContent = entry.materialer || '-';
-                        row.insertCell().textContent = entry.beskrivelse || '-';
-                        
-                        const actionsCell = row.insertCell();
-                        actionsCell.innerHTML = `<i class="fas fa-pencil text-blue-600 hover:text-blue-800" onclick="event.stopPropagation(); loadEntryForEdit(${entry.id})"></i>
-                                                 <i class="fas fa-trash-can text-red-600 hover:text-red-800" onclick="event.stopPropagation(); deleteEntry(${entry.id})"></i>`;
+                    // Grupper efter dag
+                    const entriesByDay = weekEntries.reduce((acc, entry) => {
+                        (acc[entry.dato] = acc[entry.dato] || []).push(entry); return acc;
+                    }, {});
+                    const sortedDays = Object.keys(entriesByDay).sort();
+
+                    sortedDays.forEach(dateKey => {
+                        const dayEntries = entriesByDay[dateKey];
+                        let dailyTotalHours = 0; dayEntries.forEach(e => dailyTotalHours += e.timer);
+
+                        // 3. Dags Række
+                        const dayHeaderRow = entriesBody.insertRow();
+                        dayHeaderRow.classList.add('day-header-row', `year-detail-${yearKey}`, `week-detail-${yearKey}-${sanitizedWeekClass}`);
+                        dayHeaderRow.dataset.date = dateKey;
+                        dayHeaderRow.style.display = isCurrentWeek ? 'table-row' : 'none';
+
+                        let dCell = dayHeaderRow.insertCell();
+                        dCell.innerHTML = `<i class="fas fa-caret-right toggle-icon ${isCurrentWeek ? 'expanded' : ''}"></i> ${getDayName(dateKey)} (${dailyTotalHours.toFixed(2)} timer)`;
+                        dCell.colSpan = entriesTable.tHead.rows[0].cells.length;
+                        dCell.addEventListener('click', (e) => { e.stopPropagation(); toggleDayVisibility(yearKey, weekKey, dateKey); });
+
+                        dayEntries.sort((a,b) => timeToMinutes(a.startTid) - timeToMinutes(b.startTid));
+                        dayEntries.forEach((entry) => {
+                            // 4. Selve tidsregistreringen
+                            const row = entriesBody.insertRow();
+                            row.classList.add('entry-row', `year-detail-${yearKey}`, `week-detail-${yearKey}-${sanitizedWeekClass}`, `day-detail-${yearKey}-${sanitizedWeekClass}-${dateKey}`);
+                            row.style.display = isCurrentWeek ? 'table-row' : 'none';
+
+                            const formattedDate = new Date(entry.dato + 'T12:00:00').toLocaleDateString('da-DK', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                            
+                            row.insertCell().textContent = formattedDate;
+                            row.insertCell().textContent = entry.aarUge.split('-')[1] || '';
+                            row.insertCell().textContent = entry.dag;
+                            row.insertCell().textContent = entry.byggeplads;
+                            row.insertCell().textContent = entry.placering || '-';
+                            row.insertCell().textContent = entry.opgave;
+                            row.insertCell().textContent = entry.startTid || '-';
+                            row.insertCell().textContent = entry.slutTid || '-';
+                            row.insertCell().textContent = entry.holdtPause ? `${entry.pauseMinutes}m` : '0m';
+                            row.insertCell().textContent = entry.timer.toFixed(2);
+                            row.insertCell().textContent = entry.ekstraarbejde ? 'Ja' : 'Nej';
+                            row.insertCell().textContent = entry.materialer || '-';
+                            row.insertCell().textContent = entry.beskrivelse || '-';
+                            
+                            const actionsCell = row.insertCell();
+                            actionsCell.innerHTML = `<i class="fas fa-pencil text-blue-600 hover:text-blue-800" onclick="event.stopPropagation(); loadEntryForEdit(${entry.id})"></i>
+                                                     <i class="fas fa-trash-can text-red-600 hover:text-red-800" onclick="event.stopPropagation(); deleteEntry(${entry.id})"></i>`;
+                        });
                     });
                 });
             });
             saveEntriesToLocalStorage(); toggleNoEntriesMessage();
         }
 
-        function toggleWeekVisibility(weekKey) {
-            const weekRows = document.querySelectorAll(`.week-detail-${weekKey}`);
-            const icon = document.querySelector(`.week-header-row[data-week="${weekKey}"] .toggle-icon`);
+        function toggleYearVisibility(yearKey) {
+            const weekRows = document.querySelectorAll(`.week-header-row.year-detail-${yearKey}`);
+            const allDetailRows = document.querySelectorAll(`.year-detail-${yearKey}`);
+            const icon = document.querySelector(`.year-header-row[data-year="${yearKey}"] .toggle-icon`);
             const isHidden = weekRows[0] && weekRows[0].style.display === 'none';
 
-            weekRows.forEach(row => {
-                if (row.classList.contains('day-header-row')) row.style.display = isHidden ? 'table-row' : 'none';
-                if (!isHidden && row.classList.contains('entry-row')) row.style.display = 'none';
-                if (!isHidden && row.classList.contains('day-header-row')) row.querySelector('.toggle-icon')?.classList.remove('expanded');
-            });
-            if (icon) icon.classList.toggle('expanded', isHidden);
+            if (isHidden) {
+                weekRows.forEach(row => row.style.display = 'table-row');
+                icon.classList.add('expanded');
+            } else {
+                allDetailRows.forEach(row => row.style.display = 'none');
+                document.querySelectorAll(`.year-detail-${yearKey} .toggle-icon`).forEach(i => i.classList.remove('expanded'));
+                icon.classList.remove('expanded');
+            }
         }
 
-        function toggleDayVisibility(dateKey, weekKey) {
-            const dayRows = document.querySelectorAll(`.day-detail-${dateKey}.week-detail-${weekKey}`);
-            const icon = document.querySelector(`.day-header-row[data-date="${dateKey}"] .toggle-icon`);
+        function toggleWeekVisibility(yearKey, weekKey) {
+            const sanitizedWeekClass = sanitizeClassName(weekKey);
+            const dayRows = document.querySelectorAll(`.day-header-row.week-detail-${yearKey}-${sanitizedWeekClass}`);
+            const allDetailRows = document.querySelectorAll(`.week-detail-${yearKey}-${sanitizedWeekClass}`);
+            const icon = document.querySelector(`.week-header-row[data-year="${yearKey}"][data-week="${weekKey}"] .toggle-icon`);
             const isHidden = dayRows[0] && dayRows[0].style.display === 'none';
-            dayRows.forEach(row => row.style.display = isHidden ? 'table-row' : 'none');
-            if (icon) icon.classList.toggle('expanded', isHidden);
+
+            if (isHidden) {
+                dayRows.forEach(row => row.style.display = 'table-row');
+                icon.classList.add('expanded');
+            } else {
+                allDetailRows.forEach(row => {
+                    if (!row.classList.contains('week-header-row')) row.style.display = 'none';
+                });
+                document.querySelectorAll(`.week-detail-${yearKey}-${sanitizedWeekClass} .toggle-icon`).forEach(i => i.classList.remove('expanded'));
+                icon.classList.remove('expanded');
+            }
+        }
+
+        function toggleDayVisibility(yearKey, weekKey, dateKey) {
+            const sanitizedWeekClass = sanitizeClassName(weekKey);
+            const entryRows = document.querySelectorAll(`.entry-row.day-detail-${yearKey}-${sanitizedWeekClass}-${dateKey}`);
+            const icon = document.querySelector(`.day-header-row[data-date="${dateKey}"] .toggle-icon`);
+            const isHidden = entryRows[0] && entryRows[0].style.display === 'none';
+
+            entryRows.forEach(row => row.style.display = isHidden ? 'table-row' : 'none');
+            icon.classList.toggle('expanded', isHidden);
         }
 
         function createEntryObject(formData) {
@@ -887,8 +956,6 @@
                  weeklyEntries.forEach(entry => {
                      entry.id = entry.id || Date.now() + Math.random(); 
                      entry.timer = parseFloat(entry.timer) || 0;
-                     
-                     // Migreringslogik for pauser
                      if (entry.holdtPause === undefined) {
                          entry.holdtPause = (entry.pause9 || entry.pause12) ? true : false;
                          let oldPauseMins = 0;
@@ -896,16 +963,14 @@
                          if(entry.pause12) oldPauseMins += 30;
                          entry.pauseMinutes = oldPauseMins;
                      }
-                     
-                     // Migreringslogik for År + Uge
-                     if (!entry.aarUge) entry.aarUge = getYearAndWeek(entry.dato);
+                     if (!entry.aarUge || !entry.aarUge.includes('-')) entry.aarUge = getYearAndWeek(entry.dato);
                  });
             }
         }
 
         function openWeekSelectionModal() {
             if (weeklyEntries.length === 0) return;
-            const uniqueWeeks = [...new Set(weeklyEntries.map(entry => entry.aarUge))].sort();
+            const uniqueWeeks = [...new Set(weeklyEntries.map(entry => entry.aarUge))].sort().reverse();
             weekCheckboxesContainer.innerHTML = ''; 
             uniqueWeeks.forEach(weekStr => {
                 const label = document.createElement('label'); label.classList.add('block', 'mb-2', 'cursor-pointer');
@@ -932,7 +997,7 @@
             selectedWeeks.forEach(weekStr => {
                 ugeseddelBody += `\n${weekStr}:\n`;
                 const entriesThisWeek = filteredEntries.filter(e => e.aarUge === weekStr);
-                const entriesByDate = entriesThisWeek.reduce((acc, entry) => { (acc[entry.dato] = acc[entry.dato] || { totalHours: 0 }).totalHours += entry.timer; return acc; }, {});
+                const entriesByDate = entriesThisWeek.reduce((acc, entry) => { Pand(acc[entry.dato] = acc[entry.dato] || { totalHours: 0 }).totalHours += entry.timer; return acc; }, {});
                 let subTotal = 0;
                 Object.keys(entriesByDate).sort().forEach(dateKey => {
                     ugeseddelBody += `  ${getDayName(dateKey)} (${new Date(dateKey).toLocaleDateString('da-DK')}): ${entriesByDate[dateKey].totalHours.toFixed(2)} timer\n`;
@@ -968,7 +1033,7 @@
 
         function openCsvExportModal() {
             if (weeklyEntries.length === 0) return;
-            const uniqueWeeks = [...new Set(weeklyEntries.map(entry => entry.aarUge))].sort();
+            const uniqueWeeks = [...new Set(weeklyEntries.map(entry => entry.aarUge))].sort().reverse();
             csvWeekCheckboxesContainer.innerHTML = '';
             uniqueWeeks.forEach(weekStr => {
                 const label = document.createElement('label'); label.classList.add('block', 'mb-1');

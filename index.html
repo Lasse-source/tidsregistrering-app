@@ -254,12 +254,20 @@
         <div class="version-number">v1.3</div>
     </div>
 
-    <!-- Modals for week selection & CSV -->
     <div id="weekSelectionModal" class="modal">
         <div class="modal-content">
             <span class="modal-close-btn" id="closeWeekSelectionModalBtn">&times;</span>
-            <h3 class="text-lg font-semibold mb-3">Vælg Uger til Afsendelse</h3>
-            <div id="weekCheckboxesContainer" class="mb-4 max-h-60 overflow-y-auto"></div>
+            <h3 class="text-lg font-semibold mb-3">Vælg År og Uge til Afsendelse</h3>
+            <div class="space-y-4 mb-4">
+                <div>
+                    <label for="selectSendYear" class="block text-sm font-medium text-gray-700">Vælg År:</label>
+                    <select id="selectSendYear" class="form-select mt-1"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Vælg Uge(r):</label>
+                    <div id="weekCheckboxesContainer" class="max-h-40 overflow-y-auto border p-2 rounded mt-1"></div>
+                </div>
+            </div>
             <div class="flex justify-end space-x-2">
                 <button id="cancelWeekSelectionBtn" class="btn btn-secondary">Annuller</button>
                 <button id="confirmWeekSelectionBtn" class="btn btn-primary">Send Valgte Uger</button>
@@ -350,6 +358,7 @@
 
         const weekSelectionModal = document.getElementById('weekSelectionModal');
         const weekCheckboxesContainer = document.getElementById('weekCheckboxesContainer');
+        const selectSendYear = document.getElementById('selectSendYear');
         const cancelWeekSelectionBtn = document.getElementById('cancelWeekSelectionBtn');
         const confirmWeekSelectionBtn = document.getElementById('confirmWeekSelectionBtn');
         const closeWeekSelectionModalBtn = document.getElementById('closeWeekSelectionModalBtn');
@@ -654,7 +663,6 @@
             entriesTable.style.display = weeklyEntries.length === 0 ? 'none' : 'table';
         }
 
-        // --- Ny og forbedret opbygning af Menuen ---
         function renderEntries() {
             entriesBody.innerHTML = ''; 
             if (weeklyEntries.length === 0) { toggleNoEntriesMessage(); return; }
@@ -663,7 +671,6 @@
             const currentYearStr = getYearString(todayStr);
             const currentWeekStr = getWeekString(todayStr);
 
-            // Grupper efter År -> Uge -> Dag
             const entriesByYear = weeklyEntries.reduce((acc, entry) => {
                 const year = getYearString(entry.dato);
                 if (!acc[year]) acc[year] = {};
@@ -678,7 +685,6 @@
             sortedYears.forEach(yearKey => {
                 const isCurrentYear = (yearKey === currentYearStr);
 
-                // 1. Års Række
                 const yearHeaderRow = entriesBody.insertRow();
                 yearHeaderRow.classList.add('year-header-row');
                 yearHeaderRow.dataset.year = yearKey;
@@ -696,7 +702,6 @@
                     const isCurrentWeek = (isCurrentYear && weekKey === currentWeekStr);
                     const sanitizedWeekClass = sanitizeClassName(weekKey);
 
-                    // 2. Uges Række (Understi)
                     const weekHeaderRow = entriesBody.insertRow();
                     weekHeaderRow.classList.add('week-header-row', `year-detail-${yearKey}`);
                     weekHeaderRow.dataset.year = yearKey;
@@ -708,7 +713,6 @@
                     wCell.colSpan = entriesTable.tHead.rows[0].cells.length;
                     wCell.addEventListener('click', (e) => { e.stopPropagation(); toggleWeekVisibility(yearKey, weekKey); });
 
-                    // Grupper efter dag
                     const entriesByDay = weekEntries.reduce((acc, entry) => {
                         (acc[entry.dato] = acc[entry.dato] || []).push(entry); return acc;
                     }, {});
@@ -718,7 +722,6 @@
                         const dayEntries = entriesByDay[dateKey];
                         let dailyTotalHours = 0; dayEntries.forEach(e => dailyTotalHours += e.timer);
 
-                        // 3. Dags Række
                         const dayHeaderRow = entriesBody.insertRow();
                         dayHeaderRow.classList.add('day-header-row', `year-detail-${yearKey}`, `week-detail-${yearKey}-${sanitizedWeekClass}`);
                         dayHeaderRow.dataset.date = dateKey;
@@ -731,7 +734,6 @@
 
                         dayEntries.sort((a,b) => timeToMinutes(a.startTid) - timeToMinutes(b.startTid));
                         dayEntries.forEach((entry) => {
-                            // 4. Selve tidsregistreringen
                             const row = entriesBody.insertRow();
                             row.classList.add('entry-row', `year-detail-${yearKey}`, `week-detail-${yearKey}-${sanitizedWeekClass}`, `day-detail-${yearKey}-${sanitizedWeekClass}-${dateKey}`);
                             row.style.display = isCurrentWeek ? 'table-row' : 'none';
@@ -970,15 +972,46 @@
 
         function openWeekSelectionModal() {
             if (weeklyEntries.length === 0) return;
-            const uniqueWeeks = [...new Set(weeklyEntries.map(entry => entry.aarUge))].sort().reverse();
-            weekCheckboxesContainer.innerHTML = ''; 
-            uniqueWeeks.forEach(weekStr => {
-                const label = document.createElement('label'); label.classList.add('block', 'mb-2', 'cursor-pointer');
-                const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.value = weekStr; checkbox.classList.add('mr-2');
-                label.appendChild(checkbox); label.appendChild(document.createTextNode(` ${weekStr}`));
+            
+            // Find unikke år ud fra dataene
+            const uniqueYears = [...new Set(weeklyEntries.map(entry => getYearString(entry.dato)))].sort().reverse();
+            
+            selectSendYear.innerHTML = '';
+            uniqueYears.forEach(year => {
+                selectSendYear.add(new Option(year, year));
+            });
+            
+            // Fyld ugerne for det valgte år automatisk
+            populateSendWeeks();
+            
+            weekSelectionModal.style.display = 'flex';
+        }
+
+        function populateSendWeeks() {
+            const selectedYear = selectSendYear.value;
+            weekCheckboxesContainer.innerHTML = '';
+            if (!selectedYear) return;
+            
+            // Filtrer registreringer på valgt år og find unikke uger
+            const weeksInYear = [...new Set(
+                weeklyEntries
+                    .filter(entry => getYearString(entry.dato) === selectedYear)
+                    .map(entry => entry.aarUge.split('-')[1] || entry.aarUge)
+            )].sort().reverse();
+            
+            weeksInYear.forEach(weekName => {
+                const fullWeekStr = `${selectedYear}-${weekName}`;
+                const label = document.createElement('label'); 
+                label.classList.add('block', 'mb-2', 'cursor-pointer', 'flex', 'items-center');
+                const checkbox = document.createElement('input'); 
+                checkbox.type = 'checkbox'; 
+                checkbox.value = fullWeekStr; 
+                checkbox.classList.add('mr-2');
+                
+                label.appendChild(checkbox); 
+                label.appendChild(document.createTextNode(` ${weekName}`));
                 weekCheckboxesContainer.appendChild(label);
             });
-            weekSelectionModal.style.display = 'flex';
         }
 
         function closeWeekSelectionModal() { weekSelectionModal.style.display = 'none'; }
@@ -997,7 +1030,7 @@
             selectedWeeks.forEach(weekStr => {
                 ugeseddelBody += `\n${weekStr}:\n`;
                 const entriesThisWeek = filteredEntries.filter(e => e.aarUge === weekStr);
-                const entriesByDate = entriesThisWeek.reduce((acc, entry) => { Pand(acc[entry.dato] = acc[entry.dato] || { totalHours: 0 }).totalHours += entry.timer; return acc; }, {});
+                const entriesByDate = entriesThisWeek.reduce((acc, entry) => { (acc[entry.dato] = acc[entry.dato] || { totalHours: 0 }).totalHours += entry.timer; return acc; }, {});
                 let subTotal = 0;
                 Object.keys(entriesByDate).sort().forEach(dateKey => {
                     ugeseddelBody += `  ${getDayName(dateKey)} (${new Date(dateKey).toLocaleDateString('da-DK')}): ${entriesByDate[dateKey].totalHours.toFixed(2)} timer\n`;
@@ -1082,6 +1115,7 @@
         confirmWeekSelectionBtn.addEventListener('click', processAndSendEmail);
         cancelWeekSelectionBtn.addEventListener('click', closeWeekSelectionModal);
         closeWeekSelectionModalBtn.addEventListener('click', closeWeekSelectionModal); 
+        selectSendYear.addEventListener('change', populateSendWeeks);
         exportCsvBtnModal.addEventListener('click', openCsvExportModal);
         confirmCsvExportBtn.addEventListener('click', processAndExportCSV);
         cancelCsvExportBtn.addEventListener('click', closeCsvExportModal);
